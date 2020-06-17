@@ -104,7 +104,8 @@
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
     <MESSAGE value="add Pod to Pod test with Iperf3" />
-    <option name="LAST_COMMIT_MESSAGE" value="add Pod to Pod test with Iperf3" />
+    <MESSAGE value="fixed problem with iperf3 creation" />
+    <option name="LAST_COMMIT_MESSAGE" value="fixed problem with iperf3 creation" />
   </component>
   <component name="VgoProject">
     <integration-enabled>true</integration-enabled>
