@@ -8,5 +8,5 @@ import (
 func main() {
 	fmt.Println("File da cui lanciare tutto")
 	fmt.Println("Pod to Pod test with Iperf3: ")
-	fmt.Printf("Test 1: %s\n", iperfPTP.IperfPodtoPod())
+	fmt.Printf("avg speed of the network: %s\n", iperfPTP.IperfPodtoPod())
 }
