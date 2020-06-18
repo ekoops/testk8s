@@ -3,7 +3,6 @@ package iperf
 import (
 	"bytes"
 	"context"
-	"flag"
 	"fmt"
 	"io"
 	appsv1 "k8s.io/api/apps/v1"
@@ -12,54 +11,23 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/utils/pointer"
-	"os"
-	"path/filepath"
 	"strconv"
 	appString "strings"
 	"time"
-	//
-	// Uncomment to load all auth plugins
-	// _ "k8s.io/client-go/plugin/pkg/client/auth"
-	//
-	// Or uncomment to load specific auth plugins
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/azure"
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/openstack"
 )
 
 var deplName = "serveriperf3"
 var namespace = "testiperf"
 var jobName = "jobiperfclient"
 
-func IperfTCPPodtoPod() string {
-	var kubeconfig *string
-	if home := homeDir(); home != "" {
-		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-	} else {
-		kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
-	}
-	flag.Parse()
-
-	// use the current context in kubeconfig
-	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	// create the clientset
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		panic(err.Error())
-	}
+func IperfTCPPodtoPod(clientset *kubernetes.Clientset) string {
 
 	nsSpec := &apiv1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
 	_, err1 := clientset.CoreV1().Namespaces().Create(context.TODO(), nsSpec, metav1.CreateOptions{})
 
 	if err1 != nil {
-		panic(err)
+		panic(err1)
 	}
 
 	fmt.Println("Namespace testiperf created")
@@ -139,7 +107,10 @@ func IperfTCPPodtoPod() string {
 				}
 			case apiv1.PodPending:
 				{
-					podvect, err = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+					podvect, errP = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+					if errP != nil {
+						panic(errP)
+					}
 					pod = podvect.Items[0]
 				}
 			case apiv1.PodFailed, apiv1.PodSucceeded:
@@ -160,8 +131,6 @@ func IperfTCPPodtoPod() string {
 			fmt.Printf("Server IP: %s\n", podIP)
 
 		}
-
-		time.Sleep(10 * time.Second)
 		command := "iperf3 -c " + podI.Status.PodIP + " -p 5002 -V -N -t 10 -Z > file.txt; cat file.txt"
 		fmt.Println("Creating Iperf Client: " + command)
 		jobsClient := clientset.BatchV1().Jobs(namespace)
@@ -323,40 +292,21 @@ func IperfTCPPodtoPod() string {
 		}
 	}
 	errNs := clientset.CoreV1().Namespaces().Delete(context.TODO(), namespace, metav1.DeleteOptions{})
-
 	if errNs != nil {
 		panic(errNs)
 	}
 	fmt.Printf("Test Namespace: %s deleted\n", namespace)
-	return fmt.Sprintf("%f", avgSpeed(netSpeeds)) + " Gbits/sec"
+	time.Sleep(10 * time.Second)
+	return fmt.Sprintf("%f", AvgSpeed(netSpeeds)) + " Gbits/sec"
 }
 
-func IperfUDPPodtoPod() string {
-	var kubeconfig *string
-	if home := homeDir(); home != "" {
-		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-	} else {
-		kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
-	}
-	flag.Parse()
-
-	// use the current context in kubeconfig
-	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	// create the clientset
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		panic(err.Error())
-	}
+func IperfUDPPodtoPod(clientset *kubernetes.Clientset) string {
 
 	nsSpec := &apiv1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
 	_, err1 := clientset.CoreV1().Namespaces().Create(context.TODO(), nsSpec, metav1.CreateOptions{})
 
 	if err1 != nil {
-		panic(err)
+		panic(err1)
 	}
 
 	fmt.Println("Namespace UDP testiperf created")
@@ -436,7 +386,10 @@ func IperfUDPPodtoPod() string {
 				}
 			case apiv1.PodPending:
 				{
-					podvect, err = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+					podvect, errP = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+					if errP != nil {
+						panic(errP)
+					}
 					pod = podvect.Items[0]
 				}
 			case apiv1.PodFailed, apiv1.PodSucceeded:
@@ -458,7 +411,6 @@ func IperfUDPPodtoPod() string {
 
 		}
 
-		time.Sleep(10 * time.Second)
 		command := "iperf3 -c " + podI.Status.PodIP + " -u -b 0 -p 5003 -V -N -t 10 -Z > file.txt; cat file.txt"
 		fmt.Println("Creating UDP Iperf Client: " + command)
 		jobsClient := clientset.BatchV1().Jobs(namespace)
@@ -625,10 +577,11 @@ func IperfUDPPodtoPod() string {
 		panic(errNs)
 	}
 	fmt.Printf("UDP Test Namespace: %s deleted\n", namespace)
-	return fmt.Sprintf("%f", avgSpeed(netSpeeds)) + " Gbits/sec"
+	time.Sleep(10 * time.Second)
+	return fmt.Sprintf("%f", AvgSpeed(netSpeeds)) + " Gbits/sec"
 }
 
-func avgSpeed(speeds [12]float64) float64 {
+func AvgSpeed(speeds [12]float64) float64 {
 	var max = 0.0
 	var countM = -1
 	var countm = -1
@@ -651,11 +604,4 @@ func avgSpeed(speeds [12]float64) float64 {
 	}
 
 	return sum / 10
-}
-
-func homeDir() string {
-	if h := os.Getenv("HOME"); h != "" {
-		return h
-	}
-	return os.Getenv("USERPROFILE") // windows
 }

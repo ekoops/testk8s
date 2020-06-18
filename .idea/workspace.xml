@@ -19,7 +19,9 @@
     <select />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="810481c3-0236-4391-aeb1-7151369e7d97" name="Default Changelist" comment="add Pod to Pod test with Iperf3">
+    <list default="true" id="810481c3-0236-4391-aeb1-7151369e7d97" name="Default Changelist" comment="Add udp iperf3 tests">
+      <change afterPath="$PROJECT_DIR$/netperf/netperfPodToPod.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/testk8s" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/iperf/iperfPodtoPod.go" beforeDir="false" afterPath="$PROJECT_DIR$/iperf/iperfPodtoPod.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/launchTests.go" beforeDir="false" afterPath="$PROJECT_DIR$/launchTests.go" afterDir="false" />
@@ -63,20 +65,33 @@
     <property name="GO_FMT" value="true" />
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
-    <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="go.import.settings.migrated" value="true" />
     <property name="go.tried.to.enable.integration.vgo.integrator" value="true" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
   </component>
   <component name="RunManager">
-    <configuration name="go build testk8s" type="GoApplicationRunConfiguration" factoryName="Go Application" temporary="true">
+    <configuration default="true" type="GoApplicationRunConfiguration" factoryName="Go Application">
       <module name="prove" />
+      <working_directory value="$PROJECT_DIR$" />
+      <go_parameters value="-i" />
+      <kind value="FILE" />
+      <method v="2" />
+    </configuration>
+    <configuration name="go build testk8s" type="GoApplicationRunConfiguration" factoryName="Go Application" temporary="true">
       <working_directory value="$PROJECT_DIR$" />
       <kind value="PACKAGE" />
       <filePath value="$PROJECT_DIR$/hello.go" />
       <package value="testk8s" />
       <directory value="$PROJECT_DIR$/" />
+      <method v="2" />
+    </configuration>
+    <configuration default="true" type="GoTestRunConfiguration" factoryName="Go Test">
+      <module name="prove" />
+      <working_directory value="$PROJECT_DIR$" />
+      <go_parameters value="-i" />
+      <framework value="gotest" />
+      <kind value="DIRECTORY" />
       <method v="2" />
     </configuration>
     <recent_temporary>
@@ -115,10 +130,10 @@
       <screen x="45" y="27" width="1321" height="741" />
     </state>
     <state x="500" y="233" width="400" height="327" key="#Go_Modules/45.27.1321.741@45.27.1321.741" timestamp="1592216513760" />
-    <state x="183" y="84" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1592402987526">
+    <state x="183" y="84" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1592462370224">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
-    <state x="183" y="84" key="#com.intellij.execution.impl.EditConfigurationsDialog/45.27.1321.741@45.27.1321.741" timestamp="1592402987526" />
+    <state x="183" y="84" key="#com.intellij.execution.impl.EditConfigurationsDialog/45.27.1321.741@45.27.1321.741" timestamp="1592462370224" />
     <state x="418" y="198" width="564" height="396" key="#com.intellij.fileTypes.FileTypeChooser" timestamp="1592216616278">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
@@ -147,13 +162,17 @@
       <screen x="45" y="27" width="1321" height="741" />
     </state>
     <state width="1275" height="175" key="GridCell.Tab.0.right/45.27.1321.741@45.27.1321.741" timestamp="1592327253957" />
-    <state x="300" y="118" width="800" height="556" key="Vcs.Push.Dialog.v2" timestamp="1592405557039">
+    <state x="300" y="118" width="800" height="556" key="Vcs.Push.Dialog.v2" timestamp="1592409181734">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
-    <state x="300" y="118" width="800" height="556" key="Vcs.Push.Dialog.v2/45.27.1321.741@45.27.1321.741" timestamp="1592405557039" />
-    <state x="477" y="311" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2" timestamp="1592406397186">
+    <state x="300" y="118" width="800" height="556" key="Vcs.Push.Dialog.v2/45.27.1321.741@45.27.1321.741" timestamp="1592409181734" />
+    <state x="477" y="311" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2" timestamp="1592409232047">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
-    <state x="477" y="311" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2/45.27.1321.741@45.27.1321.741" timestamp="1592406397186" />
+    <state x="477" y="311" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2/45.27.1321.741@45.27.1321.741" timestamp="1592409232047" />
+    <state x="368" y="89" width="672" height="678" key="search.everywhere.popup" timestamp="1592471758343">
+      <screen x="45" y="27" width="1321" height="741" />
+    </state>
+    <state x="368" y="89" width="672" height="678" key="search.everywhere.popup/45.27.1321.741@45.27.1321.741" timestamp="1592471758343" />
   </component>
 </project>

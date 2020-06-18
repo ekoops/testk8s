@@ -1,13 +1,56 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
+	"os"
+	"path/filepath"
 	iperfPTP "testk8s/iperf"
+	netperfPTP "testk8s/netperf"
+	"time"
 )
 
 func main() {
-	fmt.Println("File da cui lanciare tutto")
-	fmt.Println("Pod to Pod test with Iperf3: ")
-	//fmt.Printf("avg speed of the network Iperf3 TCP: %s\n", iperfPTP.IperfTCPPodtoPod())
-	fmt.Printf("avg speed of the network Iperf3 UDP: %s\n", iperfPTP.IperfUDPPodtoPod())
+	clientset := initialSetting()
+	fmt.Println(time.Now())
+	fmt.Printf("avg speed of the network Iperf3 TCP: %s\n", iperfPTP.IperfTCPPodtoPod(clientset))
+	fmt.Println(time.Now())
+	fmt.Printf("avg speed of the network Netperf TCP: %s\n", netperfPTP.NetperfTCPPodtoPod(clientset))
+	fmt.Println(time.Now())
+	fmt.Printf("avg speed of the network Iperf3 UDP: %s\n", iperfPTP.IperfUDPPodtoPod(clientset))
+	fmt.Println(time.Now())
+	fmt.Printf("avg speed of the network Netperf UDP: %s\n", netperfPTP.NetperfUDPPodtoPod(clientset))
+	fmt.Println(time.Now())
+}
+
+func initialSetting() *kubernetes.Clientset {
+	var kubeconfig *string
+	if home := homeDir(); home != "" {
+		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
+	} else {
+		kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
+	}
+	flag.Parse()
+
+	// use the current context in kubeconfig
+	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	// create the clientset
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		panic(err.Error())
+	}
+	return clientset
+}
+
+func homeDir() string {
+	if h := os.Getenv("HOME"); h != "" {
+		return h
+	}
+	return os.Getenv("USERPROFILE") // windows
 }
