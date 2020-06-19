@@ -7,7 +7,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"os"
 	"path/filepath"
-	iperfPTP "testk8s/iperf"
+	"testk8s/netperf"
 	"time"
 )
 
@@ -22,8 +22,9 @@ func main() {
 	fmt.Println(time.Now())
 	fmt.Printf("avg speed of the network Netperf UDP: %s\n", netperfPTP.NetperfUDPPodtoPod(clientset))
 	fmt.Println(time.Now())*/
-	fmt.Printf("avg speed of network Iperf3 TCP with service: %s\n", iperfPTP.TCPservice(clientset))
+	//fmt.Printf("avg speed of network Iperf3 TCP with service: %s\n", iperfPTP.TCPservice(clientset))
 	//fmt.Printf("avg speed of network Iperf3 TCP with service: %s\n", iperfPTP.UDPservice(clientset))
+	fmt.Printf("avg speed of network Netperf TCP with service: %s\n", netperf.TCPservice(clientset))
 
 }
 
