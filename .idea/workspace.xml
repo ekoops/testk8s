@@ -19,12 +19,11 @@
     <select />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="810481c3-0236-4391-aeb1-7151369e7d97" name="Default Changelist" comment="Add udp iperf3 tests">
-      <change afterPath="$PROJECT_DIR$/netperf/netperfPodToPod.go" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/testk8s" afterDir="false" />
+    <list default="true" id="810481c3-0236-4391-aeb1-7151369e7d97" name="Default Changelist" comment="Add netperf tests (TCP and UDP)">
+      <change afterPath="$PROJECT_DIR$/iperf/iperfService.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/iperf/iperfPodtoPod.go" beforeDir="false" afterPath="$PROJECT_DIR$/iperf/iperfPodtoPod.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/launchTests.go" beforeDir="false" afterPath="$PROJECT_DIR$/launchTests.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/testk8s" beforeDir="false" afterPath="$PROJECT_DIR$/testk8s" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -35,6 +34,7 @@
     <option name="RECENT_TEMPLATES">
       <list>
         <option value="Go Application" />
+        <option value="Go File" />
       </list>
     </option>
   </component>
@@ -61,7 +61,7 @@
   <component name="PropertiesComponent">
     <property name="ASKED_ADD_EXTERNAL_FILES" value="true" />
     <property name="ASKED_SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
-    <property name="DefaultGoTemplateProperty" value="Go Application" />
+    <property name="DefaultGoTemplateProperty" value="Go File" />
     <property name="GO_FMT" value="true" />
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />

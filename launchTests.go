@@ -8,21 +8,23 @@ import (
 	"os"
 	"path/filepath"
 	iperfPTP "testk8s/iperf"
-	netperfPTP "testk8s/netperf"
 	"time"
 )
 
 func main() {
 	clientset := initialSetting()
 	fmt.Println(time.Now())
-	fmt.Printf("avg speed of the network Iperf3 TCP: %s\n", iperfPTP.IperfTCPPodtoPod(clientset))
+	/*fmt.Printf("avg speed of the network Iperf3 TCP: %s\n", iperfPTP.IperfTCPPodtoPod(clientset))
 	fmt.Println(time.Now())
 	fmt.Printf("avg speed of the network Netperf TCP: %s\n", netperfPTP.NetperfTCPPodtoPod(clientset))
 	fmt.Println(time.Now())
 	fmt.Printf("avg speed of the network Iperf3 UDP: %s\n", iperfPTP.IperfUDPPodtoPod(clientset))
 	fmt.Println(time.Now())
 	fmt.Printf("avg speed of the network Netperf UDP: %s\n", netperfPTP.NetperfUDPPodtoPod(clientset))
-	fmt.Println(time.Now())
+	fmt.Println(time.Now())*/
+	fmt.Printf("avg speed of network Iperf3 TCP with service: %s\n", iperfPTP.TCPservice(clientset))
+	//fmt.Printf("avg speed of network Iperf3 TCP with service: %s\n", iperfPTP.UDPservice(clientset))
+
 }
 
 func initialSetting() *kubernetes.Clientset {
