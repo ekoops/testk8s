@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -15,15 +14,16 @@ import (
 	"k8s.io/utils/pointer"
 	"strconv"
 	appString "strings"
-	"time"
+	netperf "testk8s/netperf"
 )
 
 var nameService = "my-service-iperf"
 var namespaceUDP = "testiperfudp"
 
-func TCPservice(clientset *kubernetes.Clientset) string {
+func TCPservice(clientset *kubernetes.Clientset, casus int) string {
 
-	createNS(clientset, namespace)
+	netperf.SetNodeSelector(casus)
+	CreateNS(clientset, namespace)
 
 	svc := apiv1.Service{
 		TypeMeta: metav1.TypeMeta{},
@@ -51,36 +51,7 @@ func TCPservice(clientset *kubernetes.Clientset) string {
 	var netSpeeds [12]float64
 
 	for i := 0; i < 12; i++ {
-		dep := &appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      deplName,
-				Namespace: namespace,
-			},
-			Spec: appsv1.DeploymentSpec{
-				Replicas: pointer.Int32Ptr(1),
-				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"app": "iperfserver"},
-				},
-				Template: apiv1.PodTemplateSpec{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:   "iperfserver",
-						Labels: map[string]string{"app": "iperfserver"},
-					},
-					Spec: apiv1.PodSpec{
-						Containers: []apiv1.Container{
-							{
-								Name:    "iperf3server",
-								Image:   "mlabbe/iperf3",
-								Command: []string{"/bin/sh"},
-								Args:    []string{"-c", "iperf3 -s -p 5001 -d -V "},
-							},
-						},
-						NodeSelector: map[string]string{"type": "node2"},
-					},
-				},
-			},
-		}
+		dep := createIperfDeployment()
 		fmt.Println("Creating deployment...")
 		res, errDepl := clientset.AppsV1().Deployments(namespace).Create(context.TODO(), dep, metav1.CreateOptions{})
 		if errDepl != nil {
@@ -170,7 +141,7 @@ func TCPservice(clientset *kubernetes.Clientset) string {
 							},
 						},
 						RestartPolicy: "OnFailure",
-						NodeSelector:  map[string]string{"type": "node1"},
+						NodeSelector:  map[string]string{"type": node},
 					},
 				},
 			},
@@ -306,13 +277,14 @@ func TCPservice(clientset *kubernetes.Clientset) string {
 
 	}
 
-	deleteNS(clientset)
+	DeleteNS(clientset)
 	return fmt.Sprintf("%f", AvgSpeed(netSpeeds)) + " Gbits/sec"
 }
 
-func UDPservice(clientset *kubernetes.Clientset) string {
+func UDPservice(clientset *kubernetes.Clientset, casus int) string {
 
-	createNS(clientset, namespaceUDP)
+	netperf.SetNodeSelector(casus)
+	CreateNS(clientset, namespaceUDP)
 
 	svc := apiv1.Service{
 		TypeMeta: metav1.TypeMeta{},
@@ -340,36 +312,7 @@ func UDPservice(clientset *kubernetes.Clientset) string {
 	var netSpeeds [12]float64
 
 	for i := 0; i < 12; i++ {
-		dep := &appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      deplName,
-				Namespace: namespaceUDP,
-			},
-			Spec: appsv1.DeploymentSpec{
-				Replicas: pointer.Int32Ptr(1),
-				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"app": "iperfserver"},
-				},
-				Template: apiv1.PodTemplateSpec{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:   "iperfserver",
-						Labels: map[string]string{"app": "iperfserver"},
-					},
-					Spec: apiv1.PodSpec{
-						Containers: []apiv1.Container{
-							{
-								Name:    "iperf3server",
-								Image:   "mlabbe/iperf3",
-								Command: []string{"/bin/sh"},
-								Args:    []string{"-c", "iperf3 -s -p 15201 -d -V "},
-							},
-						},
-						NodeSelector: map[string]string{"type": "node2"},
-					},
-				},
-			},
-		}
+		dep := createIperfDeployment()
 		fmt.Println("Creating deployment...")
 		res, errDepl := clientset.AppsV1().Deployments(namespaceUDP).Create(context.TODO(), dep, metav1.CreateOptions{})
 		if errDepl != nil {
@@ -459,7 +402,7 @@ func UDPservice(clientset *kubernetes.Clientset) string {
 							},
 						},
 						RestartPolicy: "OnFailure",
-						NodeSelector:  map[string]string{"type": "node1"},
+						NodeSelector:  map[string]string{"type": node},
 					},
 				},
 			},
@@ -596,23 +539,19 @@ func UDPservice(clientset *kubernetes.Clientset) string {
 
 	}
 
-	deleteNS(clientset)
-	time.Sleep(10 * time.Second)
+	DeleteNS(clientset)
 	return fmt.Sprintf("%f", AvgSpeed(netSpeeds)) + " Gbits/sec"
 }
 
-func createNS(clientset *kubernetes.Clientset, ns string) {
+func CreateNS(clientset *kubernetes.Clientset, ns string) {
 	nsSpec := &apiv1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}}
 	_, err1 := clientset.CoreV1().Namespaces().Create(context.TODO(), nsSpec, metav1.CreateOptions{})
-
 	if err1 != nil {
 		panic(err1)
 	}
-
-	fmt.Println("Namespace testiperf created")
 }
 
-func deleteNS(clientset *kubernetes.Clientset) {
+func DeleteNS(clientset *kubernetes.Clientset) {
 	errNs := clientset.CoreV1().Namespaces().Delete(context.TODO(), namespace, metav1.DeleteOptions{})
 	if errNs != nil {
 		panic(errNs)

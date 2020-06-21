@@ -14,18 +14,20 @@ import (
 func main() {
 	clientset := initialSetting()
 	fmt.Println(time.Now())
-	/*fmt.Printf("avg speed of the network Iperf3 TCP: %s\n", iperfPTP.IperfTCPPodtoPod(clientset))
+	fmt.Println("POD TO POD DIFFERENT NODE")
+	/*fmt.Printf("avg speed of the network Iperf3 TCP: %s\n", iperfPTP.IperfTCPPodtoPod(clientset, 1))
 	fmt.Println(time.Now())
-	fmt.Printf("avg speed of the network Netperf TCP: %s\n", netperfPTP.NetperfTCPPodtoPod(clientset))
+	fmt.Printf("avg speed of the network Netperf TCP: %s\n", netperfPTP.NetperfTCPPodtoPod(clientset, 1))
 	fmt.Println(time.Now())
-	fmt.Printf("avg speed of the network Iperf3 UDP: %s\n", iperfPTP.IperfUDPPodtoPod(clientset))
+	fmt.Printf("avg speed of the network Iperf3 UDP: %s\n", iperfPTP.IperfUDPPodtoPod(clientset, 1))
 	fmt.Println(time.Now())
-	fmt.Printf("avg speed of the network Netperf UDP: %s\n", netperfPTP.NetperfUDPPodtoPod(clientset))
+	fmt.Printf("avg speed of the network Netperf UDP: %s\n", netperfPTP.NetperfUDPPodtoPod(clientset, 1))
 	fmt.Println(time.Now())*/
-	//fmt.Printf("avg speed of network Iperf3 TCP with service: %s\n", iperfPTP.TCPservice(clientset))
-	//fmt.Printf("avg speed of network Iperf3 TCP with service: %s\n", iperfPTP.UDPservice(clientset))
-	fmt.Printf("avg speed of network Netperf TCP with service: %s\n", netperf.TCPservice(clientset))
+	//fmt.Printf("avg speed of network Iperf3 TCP with service: %s\n", iperfPTP.TCPservice(clientset, 1))
+	//fmt.Printf("avg speed of network Iperf3 TCP with service: %s\n", iperfPTP.UDPservice(clientset, 1))
+	fmt.Printf("avg speed of network Netperf TCP with service: %s\n", netperf.TCPservice(clientset, 1))
 
+	fmt.Println("POD TO POD SAME NODE")
 }
 
 func initialSetting() *kubernetes.Clientset {
