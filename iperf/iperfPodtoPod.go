@@ -14,14 +14,19 @@ import (
 	"k8s.io/utils/pointer"
 	"strconv"
 	appString "strings"
+	netperf "testk8s/netperf"
 	"time"
 )
 
 var deplName = "serveriperf3"
 var namespace = "testiperf"
 var jobName = "jobiperfclient"
+var node = ""
+var node2 = ""
 
-func IperfTCPPodtoPod(clientset *kubernetes.Clientset) string {
+func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
+
+	netperf.SetNodeSelector(casus)
 
 	nsSpec := &apiv1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
 	_, err1 := clientset.CoreV1().Namespaces().Create(context.TODO(), nsSpec, metav1.CreateOptions{})
@@ -37,36 +42,7 @@ func IperfTCPPodtoPod(clientset *kubernetes.Clientset) string {
 	var netSpeeds [12]float64
 
 	for i := 0; i < 12; i++ {
-		dep := &appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      deplName,
-				Namespace: namespace,
-			},
-			Spec: appsv1.DeploymentSpec{
-				Replicas: pointer.Int32Ptr(1),
-				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"app": "iperfserver"},
-				},
-				Template: apiv1.PodTemplateSpec{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:   "iperfserver",
-						Labels: map[string]string{"app": "iperfserver"},
-					},
-					Spec: apiv1.PodSpec{
-						Containers: []apiv1.Container{
-							{
-								Name:    "iperf3server",
-								Image:   "mlabbe/iperf3",
-								Command: []string{"/bin/sh"},
-								Args:    []string{"-c", "iperf3 -s -p 5002 -d -V "},
-							},
-						},
-						NodeSelector: map[string]string{"type": "node2"},
-					},
-				},
-			},
-		}
+		dep := createIperfDeployment()
 		fmt.Println("Creating deployment...")
 		res, errDepl := clientset.AppsV1().Deployments(namespace).Create(context.TODO(), dep, metav1.CreateOptions{})
 		if errDepl != nil {
@@ -156,7 +132,7 @@ func IperfTCPPodtoPod(clientset *kubernetes.Clientset) string {
 							},
 						},
 						RestartPolicy: "OnFailure",
-						NodeSelector:  map[string]string{"type": "node1"},
+						NodeSelector:  map[string]string{"type": node},
 					},
 				},
 			},
@@ -300,14 +276,10 @@ func IperfTCPPodtoPod(clientset *kubernetes.Clientset) string {
 	return fmt.Sprintf("%f", AvgSpeed(netSpeeds)) + " Gbits/sec"
 }
 
-func IperfUDPPodtoPod(clientset *kubernetes.Clientset) string {
+func IperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 
-	nsSpec := &apiv1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
-	_, err1 := clientset.CoreV1().Namespaces().Create(context.TODO(), nsSpec, metav1.CreateOptions{})
-
-	if err1 != nil {
-		panic(err1)
-	}
+	netperf.SetNodeSelector(casus)
+	CreateNS(clientset, namespace)
 
 	fmt.Println("Namespace UDP testiperf created")
 
@@ -316,36 +288,7 @@ func IperfUDPPodtoPod(clientset *kubernetes.Clientset) string {
 	var netSpeeds [12]float64
 
 	for i := 0; i < 12; i++ {
-		dep := &appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      deplName,
-				Namespace: namespace,
-			},
-			Spec: appsv1.DeploymentSpec{
-				Replicas: pointer.Int32Ptr(1),
-				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"app": "iperfserver"},
-				},
-				Template: apiv1.PodTemplateSpec{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:   "iperfserver",
-						Labels: map[string]string{"app": "iperfserver"},
-					},
-					Spec: apiv1.PodSpec{
-						Containers: []apiv1.Container{
-							{
-								Name:    "iperf3server",
-								Image:   "mlabbe/iperf3",
-								Command: []string{"/bin/sh"},
-								Args:    []string{"-c", "iperf3 -s -p 5003 -d -V "},
-							},
-						},
-						NodeSelector: map[string]string{"type": "node2"},
-					},
-				},
-			},
-		}
+		dep := createIperfDeployment()
 		fmt.Println("Creating deployment...")
 		res, errDepl := clientset.AppsV1().Deployments(namespace).Create(context.TODO(), dep, metav1.CreateOptions{})
 		if errDepl != nil {
@@ -436,7 +379,7 @@ func IperfUDPPodtoPod(clientset *kubernetes.Clientset) string {
 							},
 						},
 						RestartPolicy: "OnFailure",
-						NodeSelector:  map[string]string{"type": "node1"},
+						NodeSelector:  map[string]string{"type": node},
 					},
 				},
 			},
@@ -579,6 +522,39 @@ func IperfUDPPodtoPod(clientset *kubernetes.Clientset) string {
 	fmt.Printf("UDP Test Namespace: %s deleted\n", namespace)
 	time.Sleep(10 * time.Second)
 	return fmt.Sprintf("%f", AvgSpeed(netSpeeds)) + " Gbits/sec"
+}
+
+func createIperfDeployment() *appsv1.Deployment {
+	return &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      deplName,
+			Namespace: namespace,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: pointer.Int32Ptr(1),
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": "iperfserver"},
+			},
+			Template: apiv1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "iperfserver",
+					Labels: map[string]string{"app": "iperfserver"},
+				},
+				Spec: apiv1.PodSpec{
+					Containers: []apiv1.Container{
+						{
+							Name:    "iperf3server",
+							Image:   "mlabbe/iperf3",
+							Command: []string{"/bin/sh"},
+							Args:    []string{"-c", "iperf3 -s -p 5002 -d -V "},
+						},
+					},
+					NodeSelector: map[string]string{"type": node2},
+				},
+			},
+		},
+	}
 }
 
 func AvgSpeed(speeds [12]float64) float64 {

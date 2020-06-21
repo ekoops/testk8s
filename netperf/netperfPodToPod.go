@@ -15,21 +15,19 @@ import (
 	"strconv"
 	appString "strings"
 	iperfPTP "testk8s/iperf"
-	"time"
 )
 
 var deplName = "servernetperf"
 var namespace = "testnetperftcp"
 var jobName = "jobnetperfclient"
+var node = "node"
+var node2 = "node2"
 
-func NetperfTCPPodtoPod(clientset *kubernetes.Clientset) string {
+func NetperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 
-	nsSpec := &apiv1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
-	_, err1 := clientset.CoreV1().Namespaces().Create(context.TODO(), nsSpec, metav1.CreateOptions{})
+	SetNodeSelector(casus)
 
-	if err1 != nil {
-		panic(err1)
-	}
+	iperfPTP.CreateNS(clientset, namespace)
 
 	fmt.Println("Namespace testnetperf created")
 
@@ -38,36 +36,7 @@ func NetperfTCPPodtoPod(clientset *kubernetes.Clientset) string {
 	var netSpeeds [12]float64
 
 	for i := 0; i < 12; i++ {
-		dep := &appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      deplName,
-				Namespace: namespace,
-			},
-			Spec: appsv1.DeploymentSpec{
-				Replicas: pointer.Int32Ptr(1),
-				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"app": "netperfserver"},
-				},
-				Template: apiv1.PodTemplateSpec{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:   "netperfserver",
-						Labels: map[string]string{"app": "netperfserver"},
-					},
-					Spec: apiv1.PodSpec{
-						Containers: []apiv1.Container{
-							{
-								Name:    "netperfserver",
-								Image:   "leannet/k8s-netperf",
-								Command: []string{"/bin/sh"},
-								Args:    []string{"-c", "netserver -p 15001 -v 2 -d; tail -f /dev/null"},
-							},
-						},
-						NodeSelector: map[string]string{"type": "node2"},
-					},
-				},
-			},
-		}
+		dep := createNetperfServer()
 		fmt.Println("Creating deployment...")
 		res, errDepl := clientset.AppsV1().Deployments(namespace).Create(context.TODO(), dep, metav1.CreateOptions{})
 		if errDepl != nil {
@@ -157,7 +126,7 @@ func NetperfTCPPodtoPod(clientset *kubernetes.Clientset) string {
 							},
 						},
 						RestartPolicy: "OnFailure",
-						NodeSelector:  map[string]string{"type": "node1"},
+						NodeSelector:  map[string]string{"type": node},
 					},
 				},
 			},
@@ -295,25 +264,16 @@ func NetperfTCPPodtoPod(clientset *kubernetes.Clientset) string {
 			}
 		}
 	}
-	errNs := clientset.CoreV1().Namespaces().Delete(context.TODO(), namespace, metav1.DeleteOptions{})
 
-	if errNs != nil {
-		panic(errNs)
-	}
-	fmt.Printf("Test Namespace: %s deleted\n", namespace)
-	time.Sleep(10 * time.Second)
+	iperfPTP.DeleteNS(clientset)
 	return fmt.Sprintf("%f", iperfPTP.AvgSpeed(netSpeeds)) + " Gbits/sec"
 }
 
-func NetperfUDPPodtoPod(clientset *kubernetes.Clientset) string {
+func NetperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 
-	nsSpec := &apiv1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
-	_, err1 := clientset.CoreV1().Namespaces().Create(context.TODO(), nsSpec, metav1.CreateOptions{})
+	SetNodeSelector(casus)
 
-	if err1 != nil {
-		panic(err1)
-	}
-
+	iperfPTP.CreateNS(clientset, namespace)
 	fmt.Println("Namespace UDP testnetperf created")
 
 	//create one deployment of netperf server UDP
@@ -321,36 +281,7 @@ func NetperfUDPPodtoPod(clientset *kubernetes.Clientset) string {
 	var netSpeeds [12]float64
 
 	for i := 0; i < 12; i++ {
-		dep := &appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      deplName,
-				Namespace: namespace,
-			},
-			Spec: appsv1.DeploymentSpec{
-				Replicas: pointer.Int32Ptr(1),
-				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"app": "netperfserver"},
-				},
-				Template: apiv1.PodTemplateSpec{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:   "netperfserver",
-						Labels: map[string]string{"app": "netperfserver"},
-					},
-					Spec: apiv1.PodSpec{
-						Containers: []apiv1.Container{
-							{
-								Name:    "netperfserver",
-								Image:   "leannet/k8s-netperf",
-								Command: []string{"/bin/sh"},
-								Args:    []string{"-c", "netserver -p 15003 -v 2 -d; tail -f /dev/null"},
-							},
-						},
-						NodeSelector: map[string]string{"type": "node2"},
-					},
-				},
-			},
-		}
+		dep := createNetperfServer()
 		fmt.Println("Creating deployment...")
 		res, errDepl := clientset.AppsV1().Deployments(namespace).Create(context.TODO(), dep, metav1.CreateOptions{})
 		if errDepl != nil {
@@ -441,7 +372,7 @@ func NetperfUDPPodtoPod(clientset *kubernetes.Clientset) string {
 							},
 						},
 						RestartPolicy: "OnFailure",
-						NodeSelector:  map[string]string{"type": "node1"},
+						NodeSelector:  map[string]string{"type": node},
 					},
 				},
 			},
@@ -502,7 +433,6 @@ func NetperfUDPPodtoPod(clientset *kubernetes.Clientset) string {
 		}
 
 		//works on strings
-		fmt.Println(str)
 		vectString := appString.Split(str, "\n")
 		strspeed := appString.Split(vectString[5], " ")
 		fmt.Println(strspeed[len(strspeed)-1])
@@ -579,12 +509,48 @@ func NetperfUDPPodtoPod(clientset *kubernetes.Clientset) string {
 			}
 		}
 	}
-	errNs := clientset.CoreV1().Namespaces().Delete(context.TODO(), namespace, metav1.DeleteOptions{})
 
-	if errNs != nil {
-		panic(errNs)
-	}
-	fmt.Printf("UDP Test Namespace: %s deleted\n", namespace)
-	time.Sleep(10 * time.Second)
+	iperfPTP.DeleteNS(clientset)
 	return fmt.Sprintf("%f", iperfPTP.AvgSpeed(netSpeeds)) + " Gbits/sec"
+}
+
+func createNetperfServer() *appsv1.Deployment {
+	return &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      deplName,
+			Namespace: namespace,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: pointer.Int32Ptr(1),
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": "netperfserver"},
+			},
+			Template: apiv1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "netperfserver",
+					Labels: map[string]string{"app": "netperfserver"},
+				},
+				Spec: apiv1.PodSpec{
+					Containers: []apiv1.Container{
+						{
+							Name:    "netperfserver",
+							Image:   "leannet/k8s-netperf",
+							Command: []string{"/bin/sh"},
+							Args:    []string{"-c", "netserver -p 15001 -v 2 -d; tail -f /dev/null"},
+						},
+					},
+					NodeSelector: map[string]string{"type": node2},
+				},
+			},
+		},
+	}
+}
+
+func SetNodeSelector(casus int) {
+	if casus == 1 {
+		node = "node1"
+	} else {
+		node = "node2"
+	}
 }
