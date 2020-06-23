@@ -14,35 +14,29 @@ import (
 	"k8s.io/utils/pointer"
 	"strconv"
 	appString "strings"
-	netperf "testk8s/netperf"
+	"testk8s/utils"
 	"time"
 )
 
 var deplName = "serveriperf3"
 var namespace = "testiperf"
 var jobName = "jobiperfclient"
+var iteration = 3
 var node = ""
-var node2 = ""
+var node2 = "node2"
 
 func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 
-	netperf.SetNodeSelector(casus)
-
-	nsSpec := &apiv1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
-	_, err1 := clientset.CoreV1().Namespaces().Create(context.TODO(), nsSpec, metav1.CreateOptions{})
-
-	if err1 != nil {
-		panic(err1)
-	}
-
-	fmt.Println("Namespace testiperf created")
+	node = utils.SetNodeSelector(casus)
+	nsSpec := utils.CreateNS(clientset, namespace)
+	fmt.Printf("Namespace %s created\n", nsSpec.Name)
 
 	//create one deployment of iperf server
 
 	var netSpeeds [12]float64
 
-	for i := 0; i < 12; i++ {
-		dep := createIperfDeployment()
+	for i := 0; i < iteration; i++ {
+		dep := createIperfDeployment("5002", namespace)
 		fmt.Println("Creating deployment...")
 		res, errDepl := clientset.AppsV1().Deployments(namespace).Create(context.TODO(), dep, metav1.CreateOptions{})
 		if errDepl != nil {
@@ -107,7 +101,7 @@ func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 			fmt.Printf("Server IP: %s\n", podIP)
 
 		}
-		command := "iperf3 -c " + podI.Status.PodIP + " -p 5002 -V -N -t 10 -Z > file.txt; cat file.txt"
+		command := "iperf3 -c " + podI.Status.PodIP + " -p 5002 -V -N -t 10 -Z -A 1,2 > file.txt; cat file.txt"
 		fmt.Println("Creating Iperf Client: " + command)
 		jobsClient := clientset.BatchV1().Jobs(namespace)
 		job := &batchv1.Job{
@@ -193,6 +187,7 @@ func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 		}
 
 		//works on strings
+		fmt.Println(str)
 		vectString := appString.Split(str, "0.00-10.00 ")
 		substringSpeed := appString.Split(vectString[1], "  ")
 		speed := appString.Split(substringSpeed[2], " ")
@@ -220,12 +215,12 @@ func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 		if errDplDel != nil {
 			panic(errDplDel)
 		}
-		DeplSize, errWaitDeplDel := clientset.AppsV1().Deployments(namespace).List(context.TODO(), metav1.ListOptions{})
+		DeplSize, errWaitDeplDel := clientset.AppsV1().Deployments(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=iperfserver"})
 		if errWaitDeplDel != nil {
 			panic(errWaitDeplDel)
 		}
 		for len(DeplSize.Items) != 0 {
-			DeplSize, errWaitDeplDel = clientset.AppsV1().Deployments(namespace).List(context.TODO(), metav1.ListOptions{})
+			DeplSize, errWaitDeplDel = clientset.AppsV1().Deployments(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=iperfserver"})
 			if errWaitDeplDel != nil {
 				panic(errWaitDeplDel)
 			}
@@ -249,37 +244,35 @@ func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 			}
 		}
 
+		fmt.Println(pod.Name)
 		//Pod delete
 		errPodDel := clientset.CoreV1().Pods(namespace).Delete(context.TODO(), pod.Name, metav1.DeleteOptions{})
-
 		if errPodDel != nil {
 			panic(errPodDel)
 		}
 
-		PodSize, errWaitPodDel := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+		PodSize, errWaitPodDel := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=iperfclient"})
 		if errWaitPodDel != nil {
 			panic(errWaitPodDel)
 		}
 		for len(PodSize.Items) != 0 {
-			PodSize, errWaitPodDel = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+			fmt.Println(len(PodSize.Items))
+			PodSize, errWaitPodDel = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=iperfclient"})
 			if errWaitPodDel != nil {
 				panic(errWaitPodDel)
 			}
 		}
 	}
-	errNs := clientset.CoreV1().Namespaces().Delete(context.TODO(), namespace, metav1.DeleteOptions{})
-	if errNs != nil {
-		panic(errNs)
-	}
+	utils.DeleteNS(clientset, namespace)
 	fmt.Printf("Test Namespace: %s deleted\n", namespace)
 	time.Sleep(10 * time.Second)
-	return fmt.Sprintf("%f", AvgSpeed(netSpeeds)) + " Gbits/sec"
+	return fmt.Sprintf("%f", utils.AvgSpeed(netSpeeds)) + " Gbits/sec"
 }
 
 func IperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 
-	netperf.SetNodeSelector(casus)
-	CreateNS(clientset, namespace)
+	node = utils.SetNodeSelector(casus)
+	utils.CreateNS(clientset, namespace)
 
 	fmt.Println("Namespace UDP testiperf created")
 
@@ -287,8 +280,8 @@ func IperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 
 	var netSpeeds [12]float64
 
-	for i := 0; i < 12; i++ {
-		dep := createIperfDeployment()
+	for i := 0; i < iteration; i++ {
+		dep := createIperfDeployment("5003", namespaceUDP)
 		fmt.Println("Creating deployment...")
 		res, errDepl := clientset.AppsV1().Deployments(namespace).Create(context.TODO(), dep, metav1.CreateOptions{})
 		if errDepl != nil {
@@ -503,32 +496,28 @@ func IperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 			panic(errPodDel)
 		}
 
-		PodSize, errWaitPodDel := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+		PodSize, errWaitPodDel := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=iperfclient"})
 		if errWaitPodDel != nil {
 			panic(errWaitPodDel)
 		}
 		for len(PodSize.Items) != 0 {
-			PodSize, errWaitPodDel = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+			PodSize, errWaitPodDel = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=iperfclient"})
 			if errWaitPodDel != nil {
 				panic(errWaitPodDel)
 			}
 		}
 	}
-	errNs := clientset.CoreV1().Namespaces().Delete(context.TODO(), namespace, metav1.DeleteOptions{})
 
-	if errNs != nil {
-		panic(errNs)
-	}
-	fmt.Printf("UDP Test Namespace: %s deleted\n", namespace)
+	utils.DeleteNS(clientset, namespace)
 	time.Sleep(10 * time.Second)
-	return fmt.Sprintf("%f", AvgSpeed(netSpeeds)) + " Gbits/sec"
+	return fmt.Sprintf("%f", utils.AvgSpeed(netSpeeds)) + " Gbits/sec"
 }
 
-func createIperfDeployment() *appsv1.Deployment {
+func createIperfDeployment(port string, ns string) *appsv1.Deployment {
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      deplName,
-			Namespace: namespace,
+			Namespace: ns,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: pointer.Int32Ptr(1),
@@ -547,7 +536,7 @@ func createIperfDeployment() *appsv1.Deployment {
 							Name:    "iperf3server",
 							Image:   "mlabbe/iperf3",
 							Command: []string{"/bin/sh"},
-							Args:    []string{"-c", "iperf3 -s -p 5002 -d -V "},
+							Args:    []string{"-c", "iperf3 -s -p " + port + " -d -V "},
 						},
 					},
 					NodeSelector: map[string]string{"type": node2},
@@ -555,29 +544,4 @@ func createIperfDeployment() *appsv1.Deployment {
 			},
 		},
 	}
-}
-
-func AvgSpeed(speeds [12]float64) float64 {
-	var max = 0.0
-	var countM = -1
-	var countm = -1
-	var min = 10000.0
-	for i := 0; i < 12; i++ {
-		if max < speeds[i] {
-			max = speeds[i]
-			countM = i
-		}
-		if min >= speeds[i] {
-			min = speeds[i]
-			countm = i
-		}
-	}
-	speeds[countM] = 0.0
-	speeds[countm] = 0.0
-	var sum = 0.0
-	for i := 0; i < 12; i++ {
-		sum = sum + speeds[i]
-	}
-
-	return sum / 10
 }

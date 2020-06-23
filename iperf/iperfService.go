@@ -13,17 +13,23 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/pointer"
 	"strconv"
-	appString "strings"
-	netperf "testk8s/netperf"
+	"strings"
+	"testk8s/utils"
 )
 
 var nameService = "my-service-iperf"
 var namespaceUDP = "testiperfudp"
 
-func TCPservice(clientset *kubernetes.Clientset, casus int) string {
+func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool) string {
 
-	netperf.SetNodeSelector(casus)
-	CreateNS(clientset, namespace)
+	node = utils.SetNodeSelector(casus)
+	nsCR := utils.CreateNS(clientset, namespace)
+	fmt.Printf("Namespace %s created \n", nsCR.Name)
+
+	if multiple {
+		fmt.Println("the program will create multiple service and endpoints")
+		utils.CreateBulk(10, clientset, namespace)
+	}
 
 	svc := apiv1.Service{
 		TypeMeta: metav1.TypeMeta{},
@@ -51,7 +57,7 @@ func TCPservice(clientset *kubernetes.Clientset, casus int) string {
 	var netSpeeds [12]float64
 
 	for i := 0; i < 12; i++ {
-		dep := createIperfDeployment()
+		dep := createIperfDeployment("5001", namespace)
 		fmt.Println("Creating deployment...")
 		res, errDepl := clientset.AppsV1().Deployments(namespace).Create(context.TODO(), dep, metav1.CreateOptions{})
 		if errDepl != nil {
@@ -63,13 +69,13 @@ func TCPservice(clientset *kubernetes.Clientset, casus int) string {
 			panic(errD.Error())
 		}
 
-		podvect, errP := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+		podvect, errP := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=iperfserver"})
 		if errP != nil {
 			panic(errP)
 		}
 		fmt.Print("Wait for pod creation..")
 		for {
-			podvect, errP = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+			podvect, errP = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=iperfserver"})
 			if errP != nil {
 				panic(errP)
 			}
@@ -92,7 +98,7 @@ func TCPservice(clientset *kubernetes.Clientset, casus int) string {
 				}
 			case apiv1.PodPending:
 				{
-					podvect, errP = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+					podvect, errP = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=iperfserver"})
 					if errP != nil {
 						panic(errP)
 					}
@@ -202,25 +208,31 @@ func TCPservice(clientset *kubernetes.Clientset, casus int) string {
 		}
 
 		//works on strings
-		vectString := appString.Split(str, "0.00-10.00 ")
-		substringSpeed := appString.Split(vectString[1], "  ")
-		speed := appString.Split(substringSpeed[2], " ")
-		velspeed, errConv := strconv.ParseFloat(speed[0], 32)
-		if errConv != nil {
-			panic(errConv)
-		}
+		fmt.Println(str)
+		if strings.Contains(str, "Connection refused") {
+			utils.DeleteNS(clientset, namespace)
+			panic("error in client server communication")
+		} else {
+			vectString := strings.Split(str, "0.00-10.00 ")
+			substringSpeed := strings.Split(vectString[1], "  ")
+			speed := strings.Split(substringSpeed[2], " ")
+			velspeed, errConv := strconv.ParseFloat(speed[0], 32)
+			if errConv != nil {
+				panic(errConv)
+			}
 
-		switch speed[1] {
-		case "Mbits/sec":
-			velspeed = velspeed / 1000
-		case "Kbits/sec":
-			velspeed = velspeed / 1000000
-		case "Gbits/sec":
-			fmt.Println("Ok, Gbits/sec")
+			switch speed[1] {
+			case "Mbits/sec":
+				velspeed = velspeed / 1000
+			case "Kbits/sec":
+				velspeed = velspeed / 1000000
+			case "Gbits/sec":
+				fmt.Println("Ok, Gbits/sec")
+			}
+			fmt.Printf("%d %f %s \n", i, velspeed, speed[1])
+			//todo vedere cosa succede con float 32, per ora 64
+			netSpeeds[i] = velspeed
 		}
-		fmt.Printf("%d %f %s \n", i, velspeed, speed[1])
-		//todo vedere cosa succede con float 32, per ora 64
-		netSpeeds[i] = velspeed
 
 		//Deployment delete
 
@@ -228,17 +240,27 @@ func TCPservice(clientset *kubernetes.Clientset, casus int) string {
 		if errDplDel != nil {
 			panic(errDplDel)
 		}
-		DeplSize, errWaitDeplDel := clientset.AppsV1().Deployments(namespace).List(context.TODO(), metav1.ListOptions{})
+		DeplSize, errWaitDeplDel := clientset.AppsV1().Deployments(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=iperfserver"})
 		if errWaitDeplDel != nil {
 			panic(errWaitDeplDel)
 		}
 		for len(DeplSize.Items) != 0 {
-			DeplSize, errWaitDeplDel = clientset.AppsV1().Deployments(namespace).List(context.TODO(), metav1.ListOptions{})
+			DeplSize, errWaitDeplDel = clientset.AppsV1().Deployments(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=iperfserver"})
 			if errWaitDeplDel != nil {
 				panic(errWaitDeplDel)
 			}
 		}
 
+		PodDeplSize, errWaitPodDeplDel := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=iperfserver"})
+		if errWaitPodDeplDel != nil {
+			panic(errWaitPodDeplDel)
+		}
+		for len(PodDeplSize.Items) != 0 {
+			PodDeplSize, errWaitPodDeplDel = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=iperfserver"})
+			if errWaitPodDeplDel != nil {
+				panic(errWaitPodDeplDel)
+			}
+		}
 		//Job delete
 
 		errJobDel := clientset.BatchV1().Jobs(namespace).Delete(context.TODO(), jobName, metav1.DeleteOptions{})
@@ -264,12 +286,12 @@ func TCPservice(clientset *kubernetes.Clientset, casus int) string {
 			panic(errPodDel)
 		}
 
-		PodSize, errWaitPodDel := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+		PodSize, errWaitPodDel := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=iperfclient"})
 		if errWaitPodDel != nil {
 			panic(errWaitPodDel)
 		}
 		for len(PodSize.Items) != 0 {
-			PodSize, errWaitPodDel = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+			PodSize, errWaitPodDel = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=iperfclient"})
 			if errWaitPodDel != nil {
 				panic(errWaitPodDel)
 			}
@@ -277,14 +299,17 @@ func TCPservice(clientset *kubernetes.Clientset, casus int) string {
 
 	}
 
-	DeleteNS(clientset)
-	return fmt.Sprintf("%f", AvgSpeed(netSpeeds)) + " Gbits/sec"
+	utils.DeleteBulk(10, clientset, namespace)
+	utils.DeleteNS(clientset, namespace)
+	fmt.Printf("Namespace %s deleted \n", namespace)
+	return fmt.Sprintf("%f", utils.AvgSpeed(netSpeeds)) + " Gbits/sec"
 }
 
-func UDPservice(clientset *kubernetes.Clientset, casus int) string {
+func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool) string {
 
-	netperf.SetNodeSelector(casus)
-	CreateNS(clientset, namespaceUDP)
+	node = utils.SetNodeSelector(casus)
+	nsCR := utils.CreateNS(clientset, namespaceUDP)
+	fmt.Printf("Namespace %s created \n", nsCR.GetName())
 
 	svc := apiv1.Service{
 		TypeMeta: metav1.TypeMeta{},
@@ -312,7 +337,7 @@ func UDPservice(clientset *kubernetes.Clientset, casus int) string {
 	var netSpeeds [12]float64
 
 	for i := 0; i < 12; i++ {
-		dep := createIperfDeployment()
+		dep := createIperfDeployment("15201", namespaceUDP)
 		fmt.Println("Creating deployment...")
 		res, errDepl := clientset.AppsV1().Deployments(namespaceUDP).Create(context.TODO(), dep, metav1.CreateOptions{})
 		if errDepl != nil {
@@ -464,26 +489,30 @@ func UDPservice(clientset *kubernetes.Clientset, casus int) string {
 		}
 
 		//works on strings
-		vectString := appString.Split(str, "0.00-10.00 ")
-		substringSpeed := appString.Split(vectString[1], "  ")
-		speed := appString.Split(substringSpeed[2], " ")
-		velspeed, errConv := strconv.ParseFloat(speed[0], 32)
-		if errConv != nil {
-			panic(errConv)
-		}
+		if strings.Contains(str, "Connection refused") || strings.Contains(str, "Connection timed out") {
+			utils.DeleteNS(clientset, namespaceUDP)
+			panic("error in client server communication")
+		} else {
+			vectString := strings.Split(str, "0.00-10.00 ")
+			substringSpeed := strings.Split(vectString[1], "  ")
+			speed := strings.Split(substringSpeed[2], " ")
+			velspeed, errConv := strconv.ParseFloat(speed[0], 32)
+			if errConv != nil {
+				panic(errConv)
+			}
 
-		switch speed[1] {
-		case "Mbits/sec":
-			velspeed = velspeed / 1000
-		case "Kbits/sec":
-			velspeed = velspeed / 1000000
-		case "Gbits/sec":
-			fmt.Println("Ok, Gbits/sec")
+			switch speed[1] {
+			case "Mbits/sec":
+				velspeed = velspeed / 1000
+			case "Kbits/sec":
+				velspeed = velspeed / 1000000
+			case "Gbits/sec":
+				fmt.Println("Ok, Gbits/sec")
+			}
+			fmt.Printf("%d %f %s \n", i, velspeed, speed[1])
+			//todo vedere cosa succede con float 32, per ora 64
+			netSpeeds[i] = velspeed
 		}
-		fmt.Printf("%d %f %s \n", i, velspeed, speed[1])
-		//todo vedere cosa succede con float 32, per ora 64
-		netSpeeds[i] = velspeed
-
 		//Deployment delete
 
 		errDplDel := clientset.AppsV1().Deployments(namespaceUDP).Delete(context.TODO(), deplName, metav1.DeleteOptions{})
@@ -539,51 +568,7 @@ func UDPservice(clientset *kubernetes.Clientset, casus int) string {
 
 	}
 
-	DeleteNS(clientset)
-	return fmt.Sprintf("%f", AvgSpeed(netSpeeds)) + " Gbits/sec"
-}
-
-func CreateNS(clientset *kubernetes.Clientset, ns string) {
-	nsSpec := &apiv1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}}
-	_, err1 := clientset.CoreV1().Namespaces().Create(context.TODO(), nsSpec, metav1.CreateOptions{})
-	if err1 != nil {
-		panic(err1)
-	}
-}
-
-func DeleteNS(clientset *kubernetes.Clientset) {
-	errNs := clientset.CoreV1().Namespaces().Delete(context.TODO(), namespace, metav1.DeleteOptions{})
-	if errNs != nil {
-		panic(errNs)
-	}
-	fmt.Printf("Test Namespace: %s deleted\n", namespace)
-
-}
-
-func createSvc(i int, clientset *kubernetes.Clientset) *apiv1.Service {
-
-	svcRandom := apiv1.Service{
-		TypeMeta: metav1.TypeMeta{},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      nameService,
-			Namespace: namespace,
-			//Labels: map[string]string{"":""},
-		},
-		Spec: apiv1.ServiceSpec{
-			Ports: []apiv1.ServicePort{{
-				Name:       "tcpport",
-				Protocol:   "TCP",
-				Port:       5110,
-				TargetPort: intstr.IntOrString{intstr.Type(0), 5110, "5110"},
-			}},
-			Selector: map[string]string{"app": "casualserver"},
-		},
-	}
-	svcCr, errCr := clientset.CoreV1().Services(namespace).Create(context.TODO(), &svcRandom, metav1.CreateOptions{})
-	if errCr != nil {
-		panic(errCr)
-	}
-	fmt.Println("Service my-service-iperf created " + svcCr.GetName())
-
-	return svcCr
+	utils.DeleteNS(clientset, namespace)
+	fmt.Printf("Namespace %s deleted \n", namespace)
+	return fmt.Sprintf("%f", utils.AvgSpeed(netSpeeds)) + " Gbits/sec"
 }

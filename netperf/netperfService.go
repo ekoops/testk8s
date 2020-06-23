@@ -14,16 +14,15 @@ import (
 	"k8s.io/utils/pointer"
 	"strconv"
 	appString "strings"
-	iperfPTP "testk8s/iperf"
+	"testk8s/utils"
+	"time"
 )
-
-var nameService = "my-service-netperf"
-var namespaceUDP = "testnetperfudp"
 
 func TCPservice(clientset *kubernetes.Clientset, casus int) string {
 
-	SetNodeSelector(casus)
-	createNS(clientset, namespace)
+	node = utils.SetNodeSelector(casus)
+	nsCr := utils.CreateNS(clientset, namespace)
+	fmt.Printf("Test Namespace: %s created\n", nsCr)
 
 	svc := apiv1.Service{
 		TypeMeta: metav1.TypeMeta{},
@@ -56,8 +55,8 @@ func TCPservice(clientset *kubernetes.Clientset, casus int) string {
 
 	var netSpeeds [12]float64
 
-	for i := 0; i < 12; i++ {
-		dep := createNetperfServer()
+	for i := 0; i < iteration; i++ {
+		dep := createNetperfServer("15001", namespace)
 		fmt.Println("Creating deployment...")
 		res, errDepl := clientset.AppsV1().Deployments(namespace).Create(context.TODO(), dep, metav1.CreateOptions{})
 		if errDepl != nil {
@@ -288,13 +287,17 @@ func TCPservice(clientset *kubernetes.Clientset, casus int) string {
 
 	}
 
-	deleteNS(clientset)
-	return fmt.Sprintf("%f", iperfPTP.AvgSpeed(netSpeeds)) + " Gbits/sec"
+	utils.DeleteNS(clientset, namespace)
+	fmt.Printf("Test Namespace: %s deleted\n", namespace)
+	return fmt.Sprintf("%f", utils.AvgSpeed(netSpeeds)) + " Gbits/sec"
 }
 
-/*func UDPservice(clientset *kubernetes.Clientset) string {
+func UDPservice(clientset *kubernetes.Clientset, casus int) string {
 
-	createNS(clientset, namespaceUDP)
+	node = utils.SetNodeSelector(casus)
+	nsCr := utils.CreateNS(clientset, namespaceUDP)
+
+	fmt.Printf("Namespace %s created\n", nsCr.Name)
 
 	svc := apiv1.Service{
 		TypeMeta: metav1.TypeMeta{},
@@ -305,24 +308,29 @@ func TCPservice(clientset *kubernetes.Clientset, casus int) string {
 		},
 		Spec: apiv1.ServiceSpec{
 			Ports: []apiv1.ServicePort{{
-				Name:       "udpport",
+				Name:       "udpconnectionport",
 				Protocol:   "UDP",
 				Port:       15201,
 				TargetPort: intstr.IntOrString{intstr.Type(0), 15201, "15201"},
+			}, {
+				Name:       "udpdataport",
+				Protocol:   "UDP",
+				Port:       35002,
+				TargetPort: intstr.IntOrString{intstr.Type(0), 35002, "35002"},
 			}},
-			Selector: map[string]string{"app": "iperfserver"},
+			Selector: map[string]string{"app": "netperfserver"},
 		},
 	}
 	svcCr, errCr := clientset.CoreV1().Services(namespaceUDP).Create(context.TODO(), &svc, metav1.CreateOptions{})
 	if errCr != nil {
 		panic(errCr)
 	}
-	fmt.Println("Service UDP my-service-iperf created " + svcCr.GetName())
+	fmt.Println("Service UDP my-service-netperf created " + svcCr.GetName())
 
 	var netSpeeds [12]float64
 
-	for i := 0; i < 12; i++ {
-		dep := createNetperfServer()
+	for i := 0; i < iteration; i++ {
+		dep := createNetperfServer("15201", namespaceUDP)
 		fmt.Println("Creating deployment...")
 		res, errDepl := clientset.AppsV1().Deployments(namespaceUDP).Create(context.TODO(), dep, metav1.CreateOptions{})
 		if errDepl != nil {
@@ -387,8 +395,8 @@ func TCPservice(clientset *kubernetes.Clientset, casus int) string {
 			fmt.Printf("Service IP: %s\n", svcIP)
 		}
 
-		command := "iperf3 -c " + serviceC.Spec.ClusterIP + " -u -b 0 -p 15201 -V -N -t 10 -Z > file.txt; cat file.txt"
-		fmt.Println("Creating UDP Iperf Client: " + command)
+		command := "netperf -t UDP_STREAM -H " + serviceC.Spec.ClusterIP + " -i 30,2 -p 15201 -v 2  -- -P ,35002 -R 1 -D > file.txt; cat file.txt"
+		fmt.Println("Creating UDP Netperf Client: " + command)
 		jobsClient := clientset.BatchV1().Jobs(namespaceUDP)
 		job := &batchv1.Job{
 			ObjectMeta: metav1.ObjectMeta{
@@ -399,15 +407,15 @@ func TCPservice(clientset *kubernetes.Clientset, casus int) string {
 				BackoffLimit: pointer.Int32Ptr(4),
 				Template: apiv1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   "iperfclient",
-						Labels: map[string]string{"app": "iperfclient"},
+						Name:   "netperfclient",
+						Labels: map[string]string{"app": "netperfclient"},
 					},
 					Spec: apiv1.PodSpec{
 						Containers: []apiv1.Container{
 							{
-								Name:    "iperfclient",
-								Image:   "networkstatic/iperf3",
-								Command: []string{"/bin/bash"},
+								Name:    "netperfclient",
+								Image:   "leannet/k8s-netperf",
+								Command: []string{"/bin/sh"},
 								Args:    []string{"-c", command},
 							},
 						},
@@ -549,27 +557,8 @@ func TCPservice(clientset *kubernetes.Clientset, casus int) string {
 
 	}
 
-	deleteNS(clientset)
+	utils.DeleteNS(clientset, namespaceUDP)
+	fmt.Printf("Test Namespace: %s deleted\n", namespaceUDP)
 	time.Sleep(10 * time.Second)
-	return fmt.Sprintf("%f", AvgSpeed(netSpeeds)) + " Gbits/sec"
-}*/
-
-func createNS(clientset *kubernetes.Clientset, ns string) {
-	nsSpec := &apiv1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}}
-	_, err1 := clientset.CoreV1().Namespaces().Create(context.TODO(), nsSpec, metav1.CreateOptions{})
-
-	if err1 != nil {
-		panic(err1)
-	}
-
-	fmt.Println("Namespace testnetperf created")
-}
-
-func deleteNS(clientset *kubernetes.Clientset) {
-	errNs := clientset.CoreV1().Namespaces().Delete(context.TODO(), namespace, metav1.DeleteOptions{})
-	if errNs != nil {
-		panic(errNs)
-	}
-	fmt.Printf("Test Namespace: %s deleted\n", namespace)
-
+	return fmt.Sprintf("%f", utils.AvgSpeed(netSpeeds)) + " Gbits/sec"
 }
