@@ -20,12 +20,15 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="810481c3-0236-4391-aeb1-7151369e7d97" name="Default Changelist" comment="Add netperf tcp service tests">
+      <change afterPath="$PROJECT_DIR$/utils/utilsTests.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/go.sum" beforeDir="false" afterPath="$PROJECT_DIR$/go.sum" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/iperf/iperfPodtoPod.go" beforeDir="false" afterPath="$PROJECT_DIR$/iperf/iperfPodtoPod.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/iperf/iperfService.go" beforeDir="false" afterPath="$PROJECT_DIR$/iperf/iperfService.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/launchTests.go" beforeDir="false" afterPath="$PROJECT_DIR$/launchTests.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/netperf/netperfPodToPod.go" beforeDir="false" afterPath="$PROJECT_DIR$/netperf/netperfPodToPod.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/netperf/netperfService.go" beforeDir="false" afterPath="$PROJECT_DIR$/netperf/netperfService.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/testk8s" beforeDir="false" afterPath="$PROJECT_DIR$/testk8s" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -72,6 +75,11 @@
     <property name="go.tried.to.enable.integration.vgo.integrator" value="true" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
   </component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/utils" />
+    </key>
+  </component>
   <component name="RunManager">
     <configuration default="true" type="GoApplicationRunConfiguration" factoryName="Go Application">
       <module name="prove" />
@@ -98,6 +106,7 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Go Build.go build testk8s" />
         <item itemvalue="Go Build.go build testk8s" />
         <item itemvalue="Go Build.go build testk8s" />
       </list>
