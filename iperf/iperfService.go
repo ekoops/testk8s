@@ -12,8 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/pointer"
-	"strconv"
-	"strings"
 	"testk8s/utils"
 )
 
@@ -26,37 +24,17 @@ func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 	nsCR := utils.CreateNS(clientset, namespace)
 	fmt.Printf("Namespace %s created \n", nsCR.Name)
 
+	netSpeeds := make([]float64, iteration)
+	cpuServ := make([]float64, iteration)
+	cpuClie := make([]float64, iteration)
+
 	if multiple {
 		fmt.Println("the program will create multiple service and endpoints")
 		utils.CreateBulk(10, clientset, namespace)
 	}
+	svcCr := createTCPService(clientset, "iperfserver")
 
-	svc := apiv1.Service{
-		TypeMeta: metav1.TypeMeta{},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      nameService,
-			Namespace: namespace,
-			//Labels: map[string]string{"":""},
-		},
-		Spec: apiv1.ServiceSpec{
-			Ports: []apiv1.ServicePort{{
-				Name:       "tcpport",
-				Protocol:   "TCP",
-				Port:       5001,
-				TargetPort: intstr.IntOrString{intstr.Type(0), 5001, "5001"},
-			}},
-			Selector: map[string]string{"app": "iperfserver"},
-		},
-	}
-	svcCr, errCr := clientset.CoreV1().Services(namespace).Create(context.TODO(), &svc, metav1.CreateOptions{})
-	if errCr != nil {
-		panic(errCr)
-	}
-	fmt.Println("Service my-service-iperf created " + svcCr.GetName())
-
-	var netSpeeds [12]float64
-
-	for i := 0; i < 12; i++ {
+	for i := 0; i < iteration; i++ {
 		dep := createIperfDeployment("5001", namespace)
 		fmt.Println("Creating deployment...")
 		res, errDepl := clientset.AppsV1().Deployments(namespace).Create(context.TODO(), dep, metav1.CreateOptions{})
@@ -117,7 +95,7 @@ func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 		} else if errSvcSearch != nil {
 			panic(errSvcSearch.Error())
 		} else {
-			fmt.Printf("Found svc %s in namespace %s\n", svc.Name, namespace)
+			fmt.Printf("Found svc %s in namespace %s\n", svcCr.Name, namespace)
 			svcIP := serviceC.Spec.ClusterIP
 			fmt.Printf("Service IP: %s\n", svcIP)
 		}
@@ -209,100 +187,24 @@ func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 
 		//works on strings
 		fmt.Println(str)
-		if strings.Contains(str, "Connection refused") {
-			utils.DeleteNS(clientset, namespace)
-			panic("error in client server communication")
-		} else {
-			vectString := strings.Split(str, "0.00-10.00 ")
-			substringSpeed := strings.Split(vectString[1], "  ")
-			speed := strings.Split(substringSpeed[2], " ")
-			velspeed, errConv := strconv.ParseFloat(speed[0], 32)
-			if errConv != nil {
-				panic(errConv)
-			}
+		velspeed, cpuClient, cpuServer := parseVel(str, clientset, namespaceUDP)
+		fmt.Printf("%d %f Gbits/sec 	clientcpu: %f	server cpu :%f\n", i, velspeed, cpuClient, cpuServer)
+		//todo vedere cosa succede con float 32, per ora 64
+		netSpeeds[i] = velspeed
+		cpuClie[i] = cpuClient
+		cpuServ[i] = cpuServer
 
-			switch speed[1] {
-			case "Mbits/sec":
-				velspeed = velspeed / 1000
-			case "Kbits/sec":
-				velspeed = velspeed / 1000000
-			case "Gbits/sec":
-				fmt.Println("Ok, Gbits/sec")
-			}
-			fmt.Printf("%d %f %s \n", i, velspeed, speed[1])
-			//todo vedere cosa succede con float 32, per ora 64
-			netSpeeds[i] = velspeed
-		}
-
-		//Deployment delete
-
-		errDplDel := clientset.AppsV1().Deployments(namespace).Delete(context.TODO(), deplName, metav1.DeleteOptions{})
-		if errDplDel != nil {
-			panic(errDplDel)
-		}
-		DeplSize, errWaitDeplDel := clientset.AppsV1().Deployments(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=iperfserver"})
-		if errWaitDeplDel != nil {
-			panic(errWaitDeplDel)
-		}
-		for len(DeplSize.Items) != 0 {
-			DeplSize, errWaitDeplDel = clientset.AppsV1().Deployments(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=iperfserver"})
-			if errWaitDeplDel != nil {
-				panic(errWaitDeplDel)
-			}
-		}
-
-		PodDeplSize, errWaitPodDeplDel := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=iperfserver"})
-		if errWaitPodDeplDel != nil {
-			panic(errWaitPodDeplDel)
-		}
-		for len(PodDeplSize.Items) != 0 {
-			PodDeplSize, errWaitPodDeplDel = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=iperfserver"})
-			if errWaitPodDeplDel != nil {
-				panic(errWaitPodDeplDel)
-			}
-		}
-		//Job delete
-
-		errJobDel := clientset.BatchV1().Jobs(namespace).Delete(context.TODO(), jobName, metav1.DeleteOptions{})
-		if errJobDel != nil {
-			panic(errJobDel)
-		}
-
-		JobSize, errWaitJobDel := clientset.BatchV1().Jobs(namespace).List(context.TODO(), metav1.ListOptions{})
-		if errWaitJobDel != nil {
-			panic(errWaitJobDel)
-		}
-		for len(JobSize.Items) != 0 {
-			JobSize, errWaitJobDel = clientset.BatchV1().Jobs(namespace).List(context.TODO(), metav1.ListOptions{})
-			if errWaitJobDel != nil {
-				panic(errWaitJobDel)
-			}
-		}
-
-		//Pod delete
-		errPodDel := clientset.CoreV1().Pods(namespace).Delete(context.TODO(), pod.Name, metav1.DeleteOptions{})
-
-		if errPodDel != nil {
-			panic(errPodDel)
-		}
-
-		PodSize, errWaitPodDel := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=iperfclient"})
-		if errWaitPodDel != nil {
-			panic(errWaitPodDel)
-		}
-		for len(PodSize.Items) != 0 {
-			PodSize, errWaitPodDel = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=iperfclient"})
-			if errWaitPodDel != nil {
-				panic(errWaitPodDel)
-			}
-		}
+		//Clean the cluster
+		utils.CleanCluster(clientset, namespace, "app=iperfserver", "app=iperfclient", deplName, jobName, pod.Name)
 
 	}
 
 	utils.DeleteBulk(10, clientset, namespace)
 	utils.DeleteNS(clientset, namespace)
 	fmt.Printf("Namespace %s deleted \n", namespace)
-	return fmt.Sprintf("%f", utils.AvgSpeed(netSpeeds)) + " Gbits/sec"
+	avgS, avgCPUS, avgCPUC := utils.AvgSpeed(netSpeeds, cpuClie, cpuServ, float64(iteration))
+	return fmt.Sprintf("%f", avgS) + " Gbits/sec, client cpu usage: " + fmt.Sprintf("%f", avgCPUC) + " and server CPU usage: " + fmt.Sprintf("%f", avgCPUS)
+
 }
 
 func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool) string {
@@ -310,7 +212,7 @@ func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 	node = utils.SetNodeSelector(casus)
 	nsCR := utils.CreateNS(clientset, namespaceUDP)
 	fmt.Printf("Namespace %s created \n", nsCR.GetName())
-
+	netSpeeds := make([]float64, iteration)
 	svc := apiv1.Service{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
@@ -321,7 +223,7 @@ func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 		Spec: apiv1.ServiceSpec{
 			Ports: []apiv1.ServicePort{{
 				Name:       "udpport",
-				Protocol:   "UDP",
+				Protocol:   apiv1.ProtocolUDP,
 				Port:       15201,
 				TargetPort: intstr.IntOrString{intstr.Type(0), 15201, "15201"},
 			}},
@@ -333,8 +235,6 @@ func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 		panic(errCr)
 	}
 	fmt.Println("Service UDP my-service-iperf created " + svcCr.GetName())
-
-	var netSpeeds [12]float64
 
 	for i := 0; i < 12; i++ {
 		dep := createIperfDeployment("15201", namespaceUDP)
@@ -402,7 +302,7 @@ func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 			fmt.Printf("Service IP: %s\n", svcIP)
 		}
 
-		command := "iperf3 -c " + serviceC.Spec.ClusterIP + " -u -b 0 -p 15201 -V -N -t 10 -Z > file.txt; cat file.txt"
+		command := "iperf3 -c " + serviceC.Spec.ClusterIP + " -u -b 2 -p 15201 -V -N -t 10 -Z > file.txt; cat file.txt"
 		fmt.Println("Creating UDP Iperf Client: " + command)
 		jobsClient := clientset.BatchV1().Jobs(namespaceUDP)
 		job := &batchv1.Job{
@@ -489,60 +389,143 @@ func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 		}
 
 		//works on strings
-		if strings.Contains(str, "Connection refused") || strings.Contains(str, "Connection timed out") {
-			utils.DeleteNS(clientset, namespaceUDP)
-			panic("error in client server communication")
+		velspeed, cpuClient, cpuServer := parseVel(str, clientset, namespaceUDP)
+		fmt.Printf("%d %f Gbits/sec 	clientcpu: %f	server cpu :%f\n", i, velspeed, cpuClient, cpuServer)
+		//todo vedere cosa succede con float 32, per ora 64
+		netSpeeds[i] = velspeed
+		cpuClie[i] = cpuClient
+		cpuServ[i] = cpuServer
+		utils.CleanCluster(clientset, namespaceUDP, "app=iperfserver", "app=iperfclient", deplName, jobName, pod.Name)
+	}
+
+	utils.DeleteNS(clientset, namespaceUDP)
+	fmt.Printf("Namespace %s deleted \n", namespaceUDP)
+	avgS, avgCPUS, avgCPUC := utils.AvgSpeed(netSpeeds, cpuClie, cpuServ, float64(iteration))
+	return fmt.Sprintf("%f", avgS) + " Gbits/sec, client cpu usage: " + fmt.Sprintf("%f", avgCPUC) + " and server CPU usage: " + fmt.Sprintf("%f", avgCPUS)
+}
+
+func TCPHairpinservice(clientset *kubernetes.Clientset, multiple bool) string {
+	nsCR := utils.CreateNS(clientset, namespace)
+	fmt.Printf("Namespace %s created \n", nsCR.Name)
+
+	if multiple {
+		fmt.Println("the program will create multiple service and endpoints")
+		utils.CreateBulk(10, clientset, namespace)
+	}
+	netSpeeds := make([]float64, iteration)
+	svcCr := createTCPService(clientset, "iperfhairpin")
+
+	for i := 0; i < iteration; i++ {
+		serviceC, errSvcSearch := clientset.CoreV1().Services(namespace).Get(context.TODO(), nameService, metav1.GetOptions{})
+		if errors.IsNotFound(errSvcSearch) {
+			fmt.Printf("svc %s in namespace %s not found\n", nameService, namespace)
+		} else if statusError, isStatus := errSvcSearch.(*errors.StatusError); isStatus {
+			fmt.Printf("Error getting svc %s in namespace %s: %v\n",
+				nameService, namespace, statusError.ErrStatus.Message)
+		} else if errSvcSearch != nil {
+			panic(errSvcSearch.Error())
 		} else {
-			vectString := strings.Split(str, "0.00-10.00 ")
-			substringSpeed := strings.Split(vectString[1], "  ")
-			speed := strings.Split(substringSpeed[2], " ")
-			velspeed, errConv := strconv.ParseFloat(speed[0], 32)
-			if errConv != nil {
-				panic(errConv)
+			fmt.Printf("Found svc %s in namespace %s\n", svcCr.Name, namespace)
+			svcIP := serviceC.Spec.ClusterIP
+			fmt.Printf("Service IP: %s\n", svcIP)
+		}
+
+		command := "iperf3 -s -p 5001; sleep 10 ;iperf3 -c " + serviceC.Spec.ClusterIP + " -p 5001 -V -N -t 10 -Z -A 1,2 > file.txt; cat file.txt"
+		fmt.Println("Creating iperfhairpin: " + command)
+		jobsClient := clientset.BatchV1().Jobs(namespace)
+		job := &batchv1.Job{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      jobName,
+				Namespace: namespace,
+			},
+			Spec: batchv1.JobSpec{
+				BackoffLimit: pointer.Int32Ptr(4),
+				Template: apiv1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   "iperfhairpin",
+						Labels: map[string]string{"app": "iperfhairpin"},
+					},
+					Spec: apiv1.PodSpec{
+						Containers: []apiv1.Container{
+							{
+								Name:    "iperfclient",
+								Image:   "networkstatic/iperf3",
+								Command: []string{"/bin/bash"},
+								Args:    []string{"-c", command},
+							},
+						},
+						RestartPolicy: "OnFailure",
+					},
+				},
+			},
+		}
+		result1, errJ := jobsClient.Create(context.TODO(), job, metav1.CreateOptions{})
+		if errJ != nil {
+			fmt.Println(errJ.Error())
+			panic(errJ)
+		}
+		fmt.Printf("Created job %q.\n", result1.GetObjectMeta().GetName())
+		podClient, errC := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=iperfhairpin"})
+		if errC != nil {
+			panic(errC)
+		}
+		for {
+			if len(podClient.Items) != 0 {
+				break
 			}
-
-			switch speed[1] {
-			case "Mbits/sec":
-				velspeed = velspeed / 1000
-			case "Kbits/sec":
-				velspeed = velspeed / 1000000
-			case "Gbits/sec":
-				fmt.Println("Ok, Gbits/sec")
-			}
-			fmt.Printf("%d %f %s \n", i, velspeed, speed[1])
-			//todo vedere cosa succede con float 32, per ora 64
-			netSpeeds[i] = velspeed
-		}
-		//Deployment delete
-
-		errDplDel := clientset.AppsV1().Deployments(namespaceUDP).Delete(context.TODO(), deplName, metav1.DeleteOptions{})
-		if errDplDel != nil {
-			panic(errDplDel)
-		}
-		DeplSize, errWaitDeplDel := clientset.AppsV1().Deployments(namespaceUDP).List(context.TODO(), metav1.ListOptions{})
-		if errWaitDeplDel != nil {
-			panic(errWaitDeplDel)
-		}
-		for len(DeplSize.Items) != 0 {
-			DeplSize, errWaitDeplDel = clientset.AppsV1().Deployments(namespaceUDP).List(context.TODO(), metav1.ListOptions{})
-			if errWaitDeplDel != nil {
-				panic(errWaitDeplDel)
+			podClient, errC = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=iperfhairpin"})
+			if errC != nil {
+				panic(errC)
 			}
 		}
+		fmt.Printf("Created pod %q.\n", podClient.Items[0].Name)
+		pod := podClient.Items[0]
+		var str string
+		ctl := 0
+		for ctl != 1 {
+			switch pod.Status.Phase {
+			case apiv1.PodRunning, apiv1.PodPending:
+				{
+					podClient, errC = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=iperfhairpin"})
+					if errC != nil {
+						panic(errC)
+					}
+					pod = podClient.Items[0]
+				}
+			case apiv1.PodSucceeded:
+				{
+					logs := clientset.CoreV1().Pods(namespace).GetLogs(pod.Name, &apiv1.PodLogOptions{})
+					podLogs, errLogs := logs.Stream(context.TODO())
+					if errLogs != nil {
+						panic(errLogs)
+					}
+					defer podLogs.Close()
+					buf := new(bytes.Buffer)
+					_, errBuf := io.Copy(buf, podLogs)
+					if errBuf != nil {
+						panic(errBuf)
+					}
+					str = buf.String()
+					fmt.Printf("%s", str)
+					ctl = 1
+					break
+				}
+			case apiv1.PodFailed:
+				panic("error panic in pod created by job")
+			}
+		}
 
-		//Job delete
-
-		errJobDel := clientset.BatchV1().Jobs(namespaceUDP).Delete(context.TODO(), jobName, metav1.DeleteOptions{})
+		errJobDel := clientset.BatchV1().Jobs(namespace).Delete(context.TODO(), jobName, metav1.DeleteOptions{})
 		if errJobDel != nil {
 			panic(errJobDel)
 		}
 
-		JobSize, errWaitJobDel := clientset.BatchV1().Jobs(namespaceUDP).List(context.TODO(), metav1.ListOptions{})
+		JobSize, errWaitJobDel := clientset.BatchV1().Jobs(namespace).List(context.TODO(), metav1.ListOptions{})
 		if errWaitJobDel != nil {
 			panic(errWaitJobDel)
 		}
 		for len(JobSize.Items) != 0 {
-			JobSize, errWaitJobDel = clientset.BatchV1().Jobs(namespaceUDP).List(context.TODO(), metav1.ListOptions{})
+			JobSize, errWaitJobDel = clientset.BatchV1().Jobs(namespace).List(context.TODO(), metav1.ListOptions{})
 			if errWaitJobDel != nil {
 				panic(errWaitJobDel)
 			}
@@ -555,20 +538,52 @@ func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 			panic(errPodDel)
 		}
 
-		PodSize, errWaitPodDel := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+		PodSize, errWaitPodDel := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=iperfclient"})
 		if errWaitPodDel != nil {
 			panic(errWaitPodDel)
 		}
 		for len(PodSize.Items) != 0 {
-			PodSize, errWaitPodDel = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+			PodSize, errWaitPodDel = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=iperfclient"})
 			if errWaitPodDel != nil {
 				panic(errWaitPodDel)
 			}
 		}
 
 	}
-
+	utils.DeleteBulk(10, clientset, namespace)
 	utils.DeleteNS(clientset, namespace)
 	fmt.Printf("Namespace %s deleted \n", namespace)
-	return fmt.Sprintf("%f", utils.AvgSpeed(netSpeeds)) + " Gbits/sec"
+	return fmt.Sprintf("%f\n", netSpeeds[0])
+}
+
+/*
+func UDPHairpinservice(clientset *kubernetes.Clientset, multiple bool) string {
+
+}*/
+
+func createTCPService(clientset *kubernetes.Clientset, label string) *apiv1.Service {
+
+	svc := apiv1.Service{
+		TypeMeta: metav1.TypeMeta{},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      nameService,
+			Namespace: namespace,
+			//Labels: map[string]string{"":""},
+		},
+		Spec: apiv1.ServiceSpec{
+			Ports: []apiv1.ServicePort{{
+				Name:       "tcpport",
+				Protocol:   "TCP",
+				Port:       5001,
+				TargetPort: intstr.IntOrString{intstr.Type(0), 5001, "5001"},
+			}},
+			Selector: map[string]string{"app": label},
+		},
+	}
+	svcCr, errCr := clientset.CoreV1().Services(namespace).Create(context.TODO(), &svc, metav1.CreateOptions{})
+	if errCr != nil {
+		panic(errCr)
+	}
+	fmt.Println("Service my-service-iperf created " + svcCr.GetName())
+	return svcCr
 }

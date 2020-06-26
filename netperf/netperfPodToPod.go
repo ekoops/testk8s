@@ -13,7 +13,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/pointer"
 	"strconv"
-	appString "strings"
+	"strings"
 	utils "testk8s/utils"
 )
 
@@ -22,19 +22,27 @@ var nameService = "my-service-netperf"
 var jobName = "jobnetperfclient"
 var namespace = "testnetperftcp"
 var namespaceUDP = "testnetperfudp"
-var iteration = 3
+var iteration = 5
 var node = " "
 var node2 = "node2"
+
+var netSpeeds []float64
+var confidenceArray []float64
+var cpuC []float64
+var cpuS []float64
 
 func NetperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 
 	node = utils.SetNodeSelector(casus)
 	nsCR := utils.CreateNS(clientset, namespace)
-	fmt.Println("Namespace %s created\n", nsCR.Name)
+	fmt.Printf("Namespace %s created\n", nsCR.Name)
 
 	//create one deployment of netperf server
 
-	var netSpeeds [12]float64
+	netSpeeds := make([]float64, iteration)
+	confidenceArray := make([]float64, iteration)
+	cpuC := make([]float64, iteration)
+	cpuS := make([]float64, iteration)
 
 	for i := 0; i < iteration; i++ {
 		dep := createNetperfServer("15001", namespace)
@@ -102,7 +110,7 @@ func NetperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 			fmt.Printf("Server IP: %s\n", podIP)
 
 		}
-		command := "netperf -H " + podI.Status.PodIP + " -i 30,2 -j -p 15001 -v 2  -- -D> file.txt; cat file.txt"
+		command := "netperf -H " + podI.Status.PodIP + " -i 30,2 -j -p 15001 -v 2 -c -- -D > file.txt; cat file.txt"
 		fmt.Println("Creating Netperf Client: " + command)
 		jobsClient := clientset.BatchV1().Jobs(namespace)
 		job := &batchv1.Job{
@@ -179,6 +187,8 @@ func NetperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 						panic(errBuf)
 					}
 					str = buf.String()
+					//TODO da cancellare
+					fmt.Println(str)
 					ctl = 1
 					break
 				}
@@ -187,87 +197,20 @@ func NetperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 			}
 		}
 
-		//works on strings
-		vectString := appString.Split(str, "\n")
-		strspeed := appString.Split(vectString[6], "    ")
-		strspeed = appString.Split(strspeed[2], " ")
-		fmt.Println(strspeed[0])
-		speed := "Mbits/sec"
-		velspeed, errConv := strconv.ParseFloat(strspeed[0], 32)
-		if errConv != nil {
-			panic(errConv)
-		}
-
-		switch speed {
-		case "Mbits/sec":
-			velspeed = velspeed / 1000
-		case "Kbits/sec":
-			velspeed = velspeed / 1000000
-		case "Gbits/sec":
-			fmt.Println("Ok, Gbits/sec")
-
-		}
-
+		velspeed, conf := calculateSpeed(str, clientset, namespace, 0)
 		fmt.Printf("%d %f Gbits/sec \n", i, velspeed)
 		//todo vedere cosa succede con float 32, per ora 64
 		netSpeeds[i] = velspeed
+		confidenceArray[i] = conf
+		cpuC[i] = float64(i)
+		cpuS[i] = float64(i)
 
-		//Deployment delete
-
-		errDplDel := clientset.AppsV1().Deployments(namespace).Delete(context.TODO(), deplName, metav1.DeleteOptions{})
-		if errDplDel != nil {
-			panic(errDplDel)
-		}
-		DeplSize, errWaitDeplDel := clientset.AppsV1().Deployments(namespace).List(context.TODO(), metav1.ListOptions{})
-		if errWaitDeplDel != nil {
-			panic(errWaitDeplDel)
-		}
-		for len(DeplSize.Items) != 0 {
-			DeplSize, errWaitDeplDel = clientset.AppsV1().Deployments(namespace).List(context.TODO(), metav1.ListOptions{})
-			if errWaitDeplDel != nil {
-				panic(errWaitDeplDel)
-			}
-		}
-
-		//Job delete
-
-		errJobDel := clientset.BatchV1().Jobs(namespace).Delete(context.TODO(), jobName, metav1.DeleteOptions{})
-		if errJobDel != nil {
-			panic(errJobDel)
-		}
-
-		JobSize, errWaitJobDel := clientset.BatchV1().Jobs(namespace).List(context.TODO(), metav1.ListOptions{})
-		if errWaitJobDel != nil {
-			panic(errWaitJobDel)
-		}
-		for len(JobSize.Items) != 0 {
-			JobSize, errWaitJobDel = clientset.BatchV1().Jobs(namespace).List(context.TODO(), metav1.ListOptions{})
-			if errWaitJobDel != nil {
-				panic(errWaitJobDel)
-			}
-		}
-
-		//Pod delete
-		errPodDel := clientset.CoreV1().Pods(namespace).Delete(context.TODO(), pod.Name, metav1.DeleteOptions{})
-
-		if errPodDel != nil {
-			panic(errPodDel)
-		}
-
-		PodSize, errWaitPodDel := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
-		if errWaitPodDel != nil {
-			panic(errWaitPodDel)
-		}
-		for len(PodSize.Items) != 0 {
-			PodSize, errWaitPodDel = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
-			if errWaitPodDel != nil {
-				panic(errWaitPodDel)
-			}
-		}
+		utils.CleanCluster(clientset, namespace, "app=netperfserver", "app=netperfclient", deplName, jobName, pod.Name)
 	}
 
 	utils.DeleteNS(clientset, namespace)
-	return fmt.Sprintf("%f", utils.AvgSpeed(netSpeeds)) + " Gbits/sec"
+	avgSp, avgClient, avgServer := utils.AvgSpeed(netSpeeds, cpuC, cpuS, float64(iteration))
+	return fmt.Sprintf("%f", avgSp) + " Gbits/sec, confidence avg" + fmt.Sprintf("%f", confidenceAVG(netSpeeds, confidenceArray, float64(iteration))) + " and cpu client/server usage : " + fmt.Sprintf("%f", avgClient) + "/" + fmt.Sprintf("%f", avgServer)
 }
 
 func NetperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
@@ -276,9 +219,9 @@ func NetperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 	nsCR := utils.CreateNS(clientset, namespaceUDP)
 	fmt.Printf("Namespace UDP %s created\n", nsCR.Name)
 
+	netSpeeds := make([]float64, iteration)
+	confidenceArray := make([]float64, iteration)
 	//create one deployment of netperf server UDP
-
-	var netSpeeds [12]float64
 
 	for i := 0; i < iteration; i++ {
 		dep := createNetperfServer("15003", namespaceUDP)
@@ -347,7 +290,7 @@ func NetperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 
 		}
 
-		command := "netperf -t UDP_STREAM -H " + podI.Status.PodIP + " -i 30,2 -p 15003 -v 2  -- -R 1 -D > file.txt; cat file.txt"
+		command := "netperf -t UDP_STREAM -H " + podI.Status.PodIP + " -i 30,2 -p 15003 -v 2 -c -- -R 1 -D > file.txt; cat file.txt"
 		fmt.Println("Creating UDP Netperf Client: " + command)
 		jobsClient := clientset.BatchV1().Jobs(namespaceUDP)
 		job := &batchv1.Job{
@@ -433,86 +376,48 @@ func NetperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 		}
 
 		//works on strings
-		vectString := appString.Split(str, "\n")
-		strspeed := appString.Split(vectString[5], " ")
-		fmt.Println(strspeed[len(strspeed)-1])
-		speed := "Mbits/sec"
-		velspeed, errConv := strconv.ParseFloat(strspeed[len(strspeed)-1], 32)
-		if errConv != nil {
-			panic(errConv)
-		}
-
-		switch speed {
-		case "Mbits/sec":
-			velspeed = velspeed / 1000
-		case "Kbits/sec":
-			velspeed = velspeed / 1000000
-		case "Gbits/sec":
-			fmt.Println("Ok, Gbits/sec")
-
-		}
-
+		velspeed, conf := calculateSpeed(str, clientset, namespaceUDP, 0)
 		fmt.Printf("%d %f Gbits/sec \n", i, velspeed)
 		//todo vedere cosa succede con float 32, per ora 64
 		netSpeeds[i] = velspeed
+		confidenceArray[i] = conf
+		cpuC[i] = float64(i)
+		cpuS[i] = float64(i)
 
-		//Deployment delete
-
-		errDplDel := clientset.AppsV1().Deployments(namespaceUDP).Delete(context.TODO(), deplName, metav1.DeleteOptions{})
-		if errDplDel != nil {
-			panic(errDplDel)
-		}
-		DeplSize, errWaitDeplDel := clientset.AppsV1().Deployments(namespaceUDP).List(context.TODO(), metav1.ListOptions{})
-		if errWaitDeplDel != nil {
-			panic(errWaitDeplDel)
-		}
-		for len(DeplSize.Items) != 0 {
-			DeplSize, errWaitDeplDel = clientset.AppsV1().Deployments(namespaceUDP).List(context.TODO(), metav1.ListOptions{})
-			if errWaitDeplDel != nil {
-				panic(errWaitDeplDel)
-			}
-		}
-
-		//Job delete
-
-		errJobDel := clientset.BatchV1().Jobs(namespaceUDP).Delete(context.TODO(), jobName, metav1.DeleteOptions{})
-		if errJobDel != nil {
-			panic(errJobDel)
-		}
-
-		JobSize, errWaitJobDel := clientset.BatchV1().Jobs(namespaceUDP).List(context.TODO(), metav1.ListOptions{})
-		if errWaitJobDel != nil {
-			panic(errWaitJobDel)
-		}
-		for len(JobSize.Items) != 0 {
-			JobSize, errWaitJobDel = clientset.BatchV1().Jobs(namespaceUDP).List(context.TODO(), metav1.ListOptions{})
-			if errWaitJobDel != nil {
-				panic(errWaitJobDel)
-			}
-		}
-
-		//Pod delete
-		errPodDel := clientset.CoreV1().Pods(namespaceUDP).Delete(context.TODO(), pod.Name, metav1.DeleteOptions{})
-
-		if errPodDel != nil {
-			panic(errPodDel)
-		}
-
-		PodSize, errWaitPodDel := clientset.CoreV1().Pods(namespaceUDP).List(context.TODO(), metav1.ListOptions{})
-		if errWaitPodDel != nil {
-			panic(errWaitPodDel)
-		}
-		for len(PodSize.Items) != 0 {
-			PodSize, errWaitPodDel = clientset.CoreV1().Pods(namespaceUDP).List(context.TODO(), metav1.ListOptions{})
-			if errWaitPodDel != nil {
-				panic(errWaitPodDel)
-			}
-		}
+		utils.CleanCluster(clientset, namespaceUDP, "app=netperfserver", "app=netperfclient", deplName, jobName, pod.Name)
 	}
 
 	utils.DeleteNS(clientset, namespaceUDP)
-	fmt.Printf("Namespace %s deleted\n", namespaceUDP)
-	return fmt.Sprintf("%f", utils.AvgSpeed(netSpeeds)) + " Gbits/sec"
+	avgSp, avgClient, avgServer := utils.AvgSpeed(netSpeeds, cpuC, cpuS, float64(iteration))
+	return fmt.Sprintf("%f", avgSp) + " Gbits/sec, confidence avg" + fmt.Sprintf("%f", confidenceAVG(netSpeeds, confidenceArray, float64(iteration))) + " and cpu client/server usage : " + fmt.Sprintf("%f", avgClient) + "/" + fmt.Sprintf("%f", avgServer)
+}
+
+func confidenceAVG(speeds []float64, conf []float64, div float64) float64 {
+	var max = 0.00
+	var min = 10000.00
+	var j, k = 0, 0
+
+	for i := 0; i < int(div); i++ {
+		if speeds[i] > max {
+			max = speeds[i]
+			k = i
+		}
+		if speeds[i] < min {
+			j = i
+			min = speeds[i]
+		}
+	}
+
+	conf[j] = 0.0
+	conf[k] = 0.0
+	var sum = 0.0
+
+	for i := 0; i < int(div); i++ {
+		sum = sum + conf[i]
+	}
+	div = div - 2.0
+
+	return sum / div
 }
 
 func createNetperfServer(port string, ns string) *appsv1.Deployment {
@@ -546,4 +451,52 @@ func createNetperfServer(port string, ns string) *appsv1.Deployment {
 			},
 		},
 	}
+}
+
+func calculateSpeed(str string, clientset *kubernetes.Clientset, ns string, add int) (float64, float64) {
+	var velspeed float64
+	var conf float64
+	var errConv error
+	//works on strings
+	if strings.Contains(str, "Connection refused") || strings.Contains(str, "establish control") || strings.Contains(str, "Connection time out") {
+		utils.DeleteNS(clientset, ns)
+		panic("establish control: are you sure there is a netserver listening on 10.103.45.178 at port 15001?")
+	} else {
+		if strings.Contains(str, "!!! WARNING") {
+			vectString := strings.Split(str, "\n")
+			strspeed := strings.Split(vectString[14+add], "    ")
+			strspeed = strings.Split(strspeed[2], " ")
+			velspeed, errConv = strconv.ParseFloat(strspeed[0], 32)
+			if errConv != nil {
+				fmt.Println("ERRORE Warning: " + strspeed[0])
+				panic(errConv)
+			}
+		} else {
+			vectString := strings.Split(str, "\n")
+			if add == -1 {
+				strspeed := strings.Split(vectString[6+add], " ")
+				velspeed, errConv = strconv.ParseFloat(strspeed[len(strspeed)-1], 32)
+			} else {
+				strspeed := strings.Split(vectString[6], "  ")
+				velspeed, errConv = strconv.ParseFloat(strspeed[len(strspeed)-2], 32)
+			}
+			conf = 2.5
+			if errConv != nil {
+				fmt.Println("ERRORE: in conversione da stringa a float prendi valore sbagliato")
+				panic(errConv)
+			}
+		}
+		speed := "Mbits/sec"
+		switch speed {
+		case "Mbits/sec":
+			velspeed = velspeed / 1000
+		case "Kbits/sec":
+			velspeed = velspeed / 1000000
+		case "Gbits/sec":
+			fmt.Println("Ok, Gbits/sec")
+
+		}
+	}
+
+	return velspeed, conf
 }

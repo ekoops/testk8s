@@ -19,16 +19,15 @@
     <select />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="810481c3-0236-4391-aeb1-7151369e7d97" name="Default Changelist" comment="Add netperf tcp service tests">
-      <change afterPath="$PROJECT_DIR$/utils/utilsTests.go" afterDir="false" />
+    <list default="true" id="810481c3-0236-4391-aeb1-7151369e7d97" name="Default Changelist" comment="Work on services">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/go.sum" beforeDir="false" afterPath="$PROJECT_DIR$/go.sum" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/iperf/iperfPodtoPod.go" beforeDir="false" afterPath="$PROJECT_DIR$/iperf/iperfPodtoPod.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/iperf/iperfService.go" beforeDir="false" afterPath="$PROJECT_DIR$/iperf/iperfService.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/launchTests.go" beforeDir="false" afterPath="$PROJECT_DIR$/launchTests.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/netperf/netperfPodToPod.go" beforeDir="false" afterPath="$PROJECT_DIR$/netperf/netperfPodToPod.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/netperf/netperfService.go" beforeDir="false" afterPath="$PROJECT_DIR$/netperf/netperfService.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/testk8s" beforeDir="false" afterPath="$PROJECT_DIR$/testk8s" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/utilsTests.go" beforeDir="false" afterPath="$PROJECT_DIR$/utils/utilsTests.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -89,6 +88,7 @@
       <method v="2" />
     </configuration>
     <configuration name="go build testk8s" type="GoApplicationRunConfiguration" factoryName="Go Application" temporary="true">
+      <module name="testk8s" />
       <working_directory value="$PROJECT_DIR$" />
       <kind value="PACKAGE" />
       <filePath value="$PROJECT_DIR$/hello.go" />
@@ -146,45 +146,73 @@
       <screen x="45" y="27" width="1321" height="741" />
     </state>
     <state x="183" y="84" key="#com.intellij.execution.impl.EditConfigurationsDialog/45.27.1321.741@45.27.1321.741" timestamp="1592462370224" />
-    <state x="418" y="198" width="564" height="396" key="#com.intellij.fileTypes.FileTypeChooser" timestamp="1592216616278">
+    <state x="418" y="198" width="580" height="396" key="#com.intellij.fileTypes.FileTypeChooser" timestamp="1592899005267">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
-    <state x="418" y="198" width="564" height="396" key="#com.intellij.fileTypes.FileTypeChooser/45.27.1321.741@45.27.1321.741" timestamp="1592216616278" />
+    <state x="418" y="198" width="580" height="396" key="#com.intellij.fileTypes.FileTypeChooser/45.27.1321.741@45.27.1321.741" timestamp="1592899005267" />
     <state x="367" y="27" width="666" height="741" key="#go_build_example.com/user/hello" timestamp="1592295064472">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
     <state x="367" y="27" width="666" height="741" key="#go_build_example.com/user/hello/45.27.1321.741@45.27.1321.741" timestamp="1592295064472" />
+    <state x="367" y="27" width="666" height="741" key="#go_build_testk8s" timestamp="1593080018574">
+      <screen x="45" y="27" width="1321" height="741" />
+    </state>
+    <state x="367" y="27" width="666" height="741" key="#go_build_testk8s/45.27.1321.741@45.27.1321.741" timestamp="1593080018574" />
     <state x="488" y="154" width="424" height="484" key="FileChooserDialogImpl" timestamp="1592218313571">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
     <state x="488" y="154" width="424" height="484" key="FileChooserDialogImpl/45.27.1321.741@45.27.1321.741" timestamp="1592218313571" />
-    <state width="1275" height="175" key="GridCell.Tab.0.bottom" timestamp="1592327253958">
+    <state width="1275" height="219" key="GridCell.Tab.0.bottom" timestamp="1593121374691">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
-    <state width="1275" height="175" key="GridCell.Tab.0.bottom/45.27.1321.741@45.27.1321.741" timestamp="1592327253958" />
-    <state width="1275" height="175" key="GridCell.Tab.0.center" timestamp="1592327253957">
+    <state width="1275" height="219" key="GridCell.Tab.0.bottom/45.27.1321.741@45.27.1321.741" timestamp="1593121374691" />
+    <state width="1275" height="219" key="GridCell.Tab.0.center" timestamp="1593121374690">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
-    <state width="1275" height="175" key="GridCell.Tab.0.center/45.27.1321.741@45.27.1321.741" timestamp="1592327253957" />
-    <state width="1275" height="175" key="GridCell.Tab.0.left" timestamp="1592327253957">
+    <state width="1275" height="219" key="GridCell.Tab.0.center/45.27.1321.741@45.27.1321.741" timestamp="1593121374690" />
+    <state width="1275" height="219" key="GridCell.Tab.0.left" timestamp="1593121374690">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
-    <state width="1275" height="175" key="GridCell.Tab.0.left/45.27.1321.741@45.27.1321.741" timestamp="1592327253957" />
-    <state width="1275" height="175" key="GridCell.Tab.0.right" timestamp="1592327253957">
+    <state width="1275" height="219" key="GridCell.Tab.0.left/45.27.1321.741@45.27.1321.741" timestamp="1593121374690" />
+    <state width="1275" height="219" key="GridCell.Tab.0.right" timestamp="1593121374691">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
-    <state width="1275" height="175" key="GridCell.Tab.0.right/45.27.1321.741@45.27.1321.741" timestamp="1592327253957" />
-    <state x="300" y="118" width="800" height="556" key="Vcs.Push.Dialog.v2" timestamp="1592587221150">
+    <state width="1275" height="219" key="GridCell.Tab.0.right/45.27.1321.741@45.27.1321.741" timestamp="1593121374691" />
+    <state width="1275" height="219" key="GridCell.Tab.1.bottom" timestamp="1593121374693">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
-    <state x="300" y="118" width="800" height="556" key="Vcs.Push.Dialog.v2/45.27.1321.741@45.27.1321.741" timestamp="1592587221150" />
-    <state x="477" y="311" width="447" height="170" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2" timestamp="1592748150227">
+    <state width="1275" height="219" key="GridCell.Tab.1.bottom/45.27.1321.741@45.27.1321.741" timestamp="1593121374693" />
+    <state width="1275" height="219" key="GridCell.Tab.1.center" timestamp="1593121374692">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
-    <state x="477" y="311" width="447" height="170" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2/45.27.1321.741@45.27.1321.741" timestamp="1592748150227" />
-    <state x="368" y="89" width="672" height="678" key="search.everywhere.popup" timestamp="1592471758343">
+    <state width="1275" height="219" key="GridCell.Tab.1.center/45.27.1321.741@45.27.1321.741" timestamp="1593121374692" />
+    <state width="1275" height="219" key="GridCell.Tab.1.left" timestamp="1593121374692">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
-    <state x="368" y="89" width="672" height="678" key="search.everywhere.popup/45.27.1321.741@45.27.1321.741" timestamp="1592471758343" />
+    <state width="1275" height="219" key="GridCell.Tab.1.left/45.27.1321.741@45.27.1321.741" timestamp="1593121374692" />
+    <state width="1275" height="219" key="GridCell.Tab.1.right" timestamp="1593121374692">
+      <screen x="45" y="27" width="1321" height="741" />
+    </state>
+    <state width="1275" height="219" key="GridCell.Tab.1.right/45.27.1321.741@45.27.1321.741" timestamp="1593121374692" />
+    <state x="172" y="85" width="1056" height="622" key="MergeDialog" timestamp="1592896387168">
+      <screen x="45" y="27" width="1321" height="741" />
+    </state>
+    <state x="172" y="85" width="1056" height="622" key="MergeDialog/45.27.1321.741@45.27.1321.741" timestamp="1592896387168" />
+    <state x="300" y="118" width="800" height="556" key="Vcs.Push.Dialog.v2" timestamp="1592896216150">
+      <screen x="45" y="27" width="1321" height="741" />
+    </state>
+    <state x="300" y="118" width="800" height="556" key="Vcs.Push.Dialog.v2/45.27.1321.741@45.27.1321.741" timestamp="1592896216150" />
+    <state x="315" y="27" width="770" height="741" key="com.intellij.openapi.editor.actions.MultiplePasteAction$ClipboardContentChooser" timestamp="1592986155203">
+      <screen x="45" y="27" width="1321" height="741" />
+    </state>
+    <state x="315" y="27" width="770" height="741" key="com.intellij.openapi.editor.actions.MultiplePasteAction$ClipboardContentChooser/45.27.1321.741@45.27.1321.741" timestamp="1592986155203" />
+    <state x="477" y="311" width="457" height="170" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2" timestamp="1592896361266">
+      <screen x="45" y="27" width="1321" height="741" />
+    </state>
+    <state x="477" y="311" width="457" height="170" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2/45.27.1321.741@45.27.1321.741" timestamp="1592896361266" />
+    <state x="368" y="89" width="672" height="678" key="search.everywhere.popup" timestamp="1592904318181">
+      <screen x="45" y="27" width="1321" height="741" />
+    </state>
+    <state x="368" y="89" width="672" height="678" key="search.everywhere.popup/45.27.1321.741@45.27.1321.741" timestamp="1592904318181" />
   </component>
 </project>
