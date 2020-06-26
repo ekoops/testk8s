@@ -22,12 +22,12 @@ func SetNodeSelector(casus int) string {
 	return node
 }
 
-func AvgSpeed(speeds [12]float64) float64 {
+func AvgSpeed(speeds []float64, cpuS []float64, cpuC []float64, div float64) (float64, float64, float64) {
 	var max = 0.0
 	var countM = -1
 	var countm = -1
 	var min = 10000.0
-	for i := 0; i < 12; i++ {
+	for i := 0; i < int(div); i++ {
 		if max < speeds[i] {
 			max = speeds[i]
 			countM = i
@@ -37,14 +37,25 @@ func AvgSpeed(speeds [12]float64) float64 {
 			countm = i
 		}
 	}
+	fmt.Printf("\nvalore max: %f e valore min: %f\n", speeds[countM], speeds[countm])
 	speeds[countM] = 0.0
 	speeds[countm] = 0.0
-	var sum = 0.0
-	for i := 0; i < 12; i++ {
-		sum = sum + speeds[i]
-	}
+	cpuC[countm] = 0.0
+	cpuS[countm] = 0.0
+	cpuC[countM] = 0.0
+	cpuS[countM] = 0.0
 
-	return sum / 10
+	var sumSp, sumC, sumS float64
+	sumSp = 0.0
+	sumC = 0.0
+	sumS = 0.0
+	for i := 0; i < int(div); i++ {
+		sumSp = sumSp + speeds[i]
+		sumS = sumS + cpuS[i]
+		sumC = sumC + cpuC[i]
+	}
+	div = div - 2
+	return sumSp / div, sumS / div, sumC / div
 }
 
 func CreateNS(clientset *kubernetes.Clientset, ns string) *apiv1.Namespace {
@@ -52,16 +63,28 @@ func CreateNS(clientset *kubernetes.Clientset, ns string) *apiv1.Namespace {
 	_, err1 := clientset.CoreV1().Namespaces().Create(context.TODO(), nsSpec, metav1.CreateOptions{})
 
 	if err1 != nil {
+		DeleteNS(clientset, ns)
 		panic(err1)
 	}
 
 	return nsSpec
 }
 
-func DeleteNS(clientset *kubernetes.Clientset, namespace string) {
-	errNs := clientset.CoreV1().Namespaces().Delete(context.TODO(), namespace, metav1.DeleteOptions{})
+func DeleteNS(clientset *kubernetes.Clientset, ns string) {
+	fmt.Println("Deleting namespace " + ns)
+	errNs := clientset.CoreV1().Namespaces().Delete(context.TODO(), ns, metav1.DeleteOptions{})
 	if errNs != nil {
 		panic(errNs)
+	}
+	nsDel, errDel := clientset.CoreV1().Namespaces().Get(context.TODO(), ns, metav1.GetOptions{})
+	if errDel != nil {
+		panic(errDel)
+	}
+	for nsDel != nil {
+		nsDel, errDel = clientset.CoreV1().Namespaces().Get(context.TODO(), ns, metav1.GetOptions{})
+		if errDel != nil {
+			nsDel = nil
+		}
 	}
 }
 
@@ -157,4 +180,65 @@ func createSvc(i int, clientset *kubernetes.Clientset, ns string) *apiv1.Service
 	fmt.Printf("Service %s created\n", svcCr.GetName())
 
 	return svcCr
+}
+
+func CleanCluster(clientset *kubernetes.Clientset, ns string, labelServer string, labelClient string, deplName string, jobName string, podName string) {
+	errDplDel := clientset.AppsV1().Deployments(ns).Delete(context.TODO(), deplName, metav1.DeleteOptions{})
+	if errDplDel != nil {
+		panic(errDplDel)
+	}
+
+	DeplSize, errWaitDeplDel := clientset.AppsV1().Deployments(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: labelServer})
+	if errWaitDeplDel != nil {
+		panic(errWaitDeplDel)
+	}
+	for len(DeplSize.Items) != 0 {
+		DeplSize, errWaitDeplDel = clientset.AppsV1().Deployments(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: labelServer})
+		if errWaitDeplDel != nil {
+			panic(errWaitDeplDel)
+		}
+	}
+	//wait until pod deply delete
+	PodSize, errWaitPodSDel := clientset.CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: labelServer})
+	if errWaitPodSDel != nil {
+		panic(errWaitPodSDel)
+	}
+	for len(PodSize.Items) != 0 {
+		PodSize, errWaitPodSDel = clientset.CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: labelServer})
+		if errWaitPodSDel != nil {
+			panic(errWaitPodSDel)
+		}
+	}
+
+	//Job delete
+	errJobDel := clientset.BatchV1().Jobs(ns).Delete(context.TODO(), jobName, metav1.DeleteOptions{})
+	if errJobDel != nil {
+		panic(errJobDel)
+	}
+	JobSize, errWaitJobDel := clientset.BatchV1().Jobs(ns).List(context.TODO(), metav1.ListOptions{})
+	if errWaitJobDel != nil {
+		panic(errWaitJobDel)
+	}
+	for len(JobSize.Items) != 0 {
+		JobSize, errWaitJobDel = clientset.BatchV1().Jobs(ns).List(context.TODO(), metav1.ListOptions{})
+		if errWaitJobDel != nil {
+			panic(errWaitJobDel)
+		}
+	}
+
+	//Pod delete
+	errPodDel := clientset.CoreV1().Pods(ns).Delete(context.TODO(), podName, metav1.DeleteOptions{})
+	if errPodDel != nil {
+		panic(errPodDel)
+	}
+	PodSize, errWaitPodDel := clientset.CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: labelClient})
+	if errWaitPodDel != nil {
+		panic(errWaitPodDel)
+	}
+	for len(PodSize.Items) != 0 {
+		PodSize, errWaitPodDel = clientset.CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: labelClient})
+		if errWaitPodDel != nil {
+			panic(errWaitPodDel)
+		}
+	}
 }
