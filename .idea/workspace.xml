@@ -19,15 +19,8 @@
     <select />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="810481c3-0236-4391-aeb1-7151369e7d97" name="Default Changelist" comment="re write scheleton of some tests">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/iperf/iperfPodtoPod.go" beforeDir="false" afterPath="$PROJECT_DIR$/iperf/iperfPodtoPod.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/iperf/iperfService.go" beforeDir="false" afterPath="$PROJECT_DIR$/iperf/iperfService.go" afterDir="false" />
+    <list default="true" id="810481c3-0236-4391-aeb1-7151369e7d97" name="Default Changelist" comment="tested netperf pod to pod tcp and udp">
       <change beforePath="$PROJECT_DIR$/launchTests.go" beforeDir="false" afterPath="$PROJECT_DIR$/launchTests.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/netperf/netperfPodToPod.go" beforeDir="false" afterPath="$PROJECT_DIR$/netperf/netperfPodToPod.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/netperf/netperfService.go" beforeDir="false" afterPath="$PROJECT_DIR$/netperf/netperfService.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/testk8s" beforeDir="false" afterPath="$PROJECT_DIR$/testk8s" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/utilsTests.go" beforeDir="false" afterPath="$PROJECT_DIR$/utils/utilsTests.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -133,7 +126,8 @@
     <MESSAGE value="fixed problem with iperf3 creation" />
     <MESSAGE value="Add iperf3 tests with service (TCP and UDP(does not work))" />
     <MESSAGE value="re write scheleton of some tests" />
-    <option name="LAST_COMMIT_MESSAGE" value="re write scheleton of some tests" />
+    <MESSAGE value="tested netperf pod to pod tcp and udp" />
+    <option name="LAST_COMMIT_MESSAGE" value="tested netperf pod to pod tcp and udp" />
   </component>
   <component name="VgoProject">
     <integration-enabled>true</integration-enabled>
@@ -203,10 +197,10 @@
       <screen x="45" y="27" width="1321" height="741" />
     </state>
     <state x="172" y="85" width="1056" height="622" key="MergeDialog/45.27.1321.741@45.27.1321.741" timestamp="1592896387168" />
-    <state x="300" y="118" width="800" height="556" key="Vcs.Push.Dialog.v2" timestamp="1592896216150">
+    <state x="300" y="118" width="800" height="556" key="Vcs.Push.Dialog.v2" timestamp="1593428445920">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
-    <state x="300" y="118" width="800" height="556" key="Vcs.Push.Dialog.v2/45.27.1321.741@45.27.1321.741" timestamp="1592896216150" />
+    <state x="300" y="118" width="800" height="556" key="Vcs.Push.Dialog.v2/45.27.1321.741@45.27.1321.741" timestamp="1593428445920" />
     <state width="661" height="371" key="XDebugger.FullValuePopup" timestamp="1593427272639">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
@@ -229,7 +223,7 @@
       <breakpoints>
         <line-breakpoint enabled="true" type="DlvLineBreakpoint">
           <url>file://$PROJECT_DIR$/netperf/netperfPodToPod.go</url>
-          <line>624</line>
+          <line>625</line>
           <option name="timeStamp" value="11" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="DlvLineBreakpoint">
@@ -239,17 +233,17 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="DlvLineBreakpoint">
           <url>file://$PROJECT_DIR$/netperf/netperfPodToPod.go</url>
-          <line>463</line>
+          <line>464</line>
           <option name="timeStamp" value="13" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="DlvLineBreakpoint">
           <url>file://$PROJECT_DIR$/netperf/netperfPodToPod.go</url>
-          <line>649</line>
+          <line>650</line>
           <option name="timeStamp" value="16" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="DlvLineBreakpoint">
           <url>file://$PROJECT_DIR$/netperf/netperfPodToPod.go</url>
-          <line>386</line>
+          <line>387</line>
           <option name="timeStamp" value="17" />
         </line-breakpoint>
       </breakpoints>
