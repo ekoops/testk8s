@@ -42,7 +42,7 @@ func main() {
 			break
 		}
 	}
-	fileoutput, err := os.Create(time.Now().String())
+	fileoutput, err := os.Create(fmt.Sprintf("%d", time.Now().Unix()))
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -54,33 +54,34 @@ func main() {
 	fmt.Printf("\n\n")
 	fileoutput.WriteString("\nPOD TO POD DIFFERENT NODES:\n")
 	fmt.Println("POD TO POD DIFFERENT NODES:")
-
-	output := iperf.IperfTCPPodtoPod(clientset, 1)
-	fmt.Printf("\n%s\navg speed of the network Iperf3 TCP: %s\n %s\n", stars, output, stars)
-	fileoutput.WriteString("\n" + stars + "\n" + "avg speed of the network Iperf3 TCP: " + output + "\n" + stars + "\n")
-
-	output = iperf.IperfUDPPodtoPod(clientset, 1)
-	fmt.Printf("\n%s\navg speed of the network Iperf3 UDP: %s\n %s\n", stars, output, stars)
-	fileoutput.WriteString("\n" + stars + "\n" + "avg speed of the network Iperf3 UDP: " + output + "\n" + stars + "\n")
-
-	output = netperf.NetperfTCPPodtoPod(clientset, 1)
-	fmt.Printf("\n%s\navg speed of the network Netperf TCP: %s\n %s\n", stars, output, stars)
-	fileoutput.WriteString("\n" + stars + "\n" + "avg speed of the network Netperf TCP: " + output + "\n" + stars + "\n")
-
-	output = netperf.NetperfUDPPodtoPod(clientset, 1)
-	fmt.Printf("\n%s\navg speed of the network Netperf UDP: %s\n %s\n", stars, output, stars)
-	fileoutput.WriteString("\n" + stars + "\n" + "avg speed of the network Netperf UDP: " + output + "\n" + stars + "\n")
-
-	fmt.Println(time.Now())
 	/*
-		output = iperf.TCPservice(clientset, 1, false)
-		fmt.Printf("\n%s\navg speed of network Iperf3 TCP with service (1 service in the cluster): %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of network Iperf3 TCP with service (1 service in the cluster): " + output + "\n" + stars + "\n")*/
-	/*
-		output := iperf.UDPservice(clientset, 1, false)
-		fmt.Printf("\n%s\navg speed of network Iperf3 UDP with service (1 service in the cluster): %s\n %s\n",stars, output,stars)
-		fileoutput.WriteString("\n"+stars+"\n"+"avg speed of network Iperf3 UDP with service (1 service in the cluster): "+output+"\n"+stars+"\n")
+		output := iperf.IperfTCPPodtoPod(clientset, 1)
+		fmt.Printf("\n%s\navg speed of the network Iperf3 TCP: %s\n %s\n", stars, output, stars)
+		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of the network Iperf3 TCP: " + output + "\n" + stars + "\n")
+
+		output = iperf.IperfUDPPodtoPod(clientset, 1)
+		fmt.Printf("\n%s\navg speed of the network Iperf3 UDP: %s\n %s\n", stars, output, stars)
+		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of the network Iperf3 UDP: " + output + "\n" + stars + "\n")
+
+		output = netperf.NetperfTCPPodtoPod(clientset, 1)
+		fmt.Printf("\n%s\navg speed of the network Netperf TCP: %s\n %s\n", stars, output, stars)
+		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of the network Netperf TCP: " + output + "\n" + stars + "\n")
+
+		output = netperf.NetperfUDPPodtoPod(clientset, 1)
+		fmt.Printf("\n%s\navg speed of the network Netperf UDP: %s\n %s\n", stars, output, stars)
+		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of the network Netperf UDP: " + output + "\n" + stars + "\n")
+
+		fmt.Println(time.Now())
+
+		fileoutput.WriteString(time.Now().String())
 	*/
+	output := iperf.TCPservice(clientset, 1, false)
+	fmt.Printf("\n%s\navg speed of network Iperf3 TCP with service (1 service in the cluster): %s\n %s\n", stars, output, stars)
+	fileoutput.WriteString("\n" + stars + "\n" + "avg speed of network Iperf3 TCP with service (1 service in the cluster): " + output + "\n" + stars + "\n")
+
+	output = iperf.UDPservice(clientset, 1, false)
+	fmt.Printf("\n%s\navg speed of network Iperf3 UDP with service (1 service in the cluster): %s\n %s\n", stars, output, stars)
+	fileoutput.WriteString("\n" + stars + "\n" + "avg speed of network Iperf3 UDP with service (1 service in the cluster): " + output + "\n" + stars + "\n")
 
 	output = netperf.TCPservice(clientset, 1, false)
 	fmt.Printf("\n%s\navg speed of network Netperf TCP with service (1 service in the cluster): %s\n %s\n", stars, output, stars)
