@@ -36,7 +36,8 @@ func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 	}
 	svcCr := createTCPService(clientset, "iperfserver")
 
-	for i := 0; i < iteration; i++ {
+	part := 0
+	for i := 0; i < (iteration / 4); i++ {
 		dep := createIperfDeployment("5001", namespace)
 		fmt.Println("Creating deployment...")
 		res, errDepl := clientset.AppsV1().Deployments(namespace).Create(context.TODO(), dep, metav1.CreateOptions{})
@@ -102,7 +103,7 @@ func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 			fmt.Printf("Service IP: %s\n", svcIP)
 		}
 
-		command := "iperf3 -c " + serviceC.Spec.ClusterIP + " -p 5001 -V -N -t 10 -Z > file.txt; cat file.txt"
+		command := "for i in 0 1 2; do iperf3 -c " + serviceC.Spec.ClusterIP + " -p 5001 -V -N -t 10 -Z >> file.txt; done;cat file.txt"
 		fmt.Println("Creating Iperf Client: " + command)
 		jobsClient := clientset.BatchV1().Jobs(namespace)
 		job := &batchv1.Job{
@@ -192,9 +193,12 @@ func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 		velspeed, cpuClient, cpuServer := parseVel(str, clientset, namespaceUDP)
 		fmt.Printf("%d %f Gbits/sec 	clientcpu: %f	server cpu :%f\n", i, velspeed, cpuClient, cpuServer)
 		//todo vedere cosa succede con float 32, per ora 64
-		netSpeeds[i] = velspeed
-		cpuClie[i] = cpuClient
-		cpuServ[i] = cpuServer
+		for j := 0; j < 3; j++ {
+			netSpeeds[part] = velspeed[j]
+			cpuClie[part] = cpuClient[j]
+			cpuServ[part] = cpuServer[j]
+			part++
+		}
 
 		//Clean the cluster
 		utils.CleanCluster(clientset, namespace, "app=iperfserver", "app=iperfclient", deplName, jobName, pod.Name)
@@ -240,7 +244,8 @@ func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 	}
 	fmt.Println("Service UDP my-service-iperf created " + svcCr.GetName())
 
-	for i := 0; i < 12; i++ {
+	part := 0
+	for i := 0; i < (iteration / 4); i++ {
 		dep := createIperfDeployment("15201", namespaceUDP)
 		fmt.Println("Creating deployment...")
 		res, errDepl := clientset.AppsV1().Deployments(namespaceUDP).Create(context.TODO(), dep, metav1.CreateOptions{})
@@ -306,7 +311,7 @@ func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 			fmt.Printf("Service IP: %s\n", svcIP)
 		}
 
-		command := "iperf3 -c " + serviceC.Spec.ClusterIP + " -u -b 2 -p 15201 -V -N -t 10 -Z > file.txt; cat file.txt"
+		command := "for i in 0 1 2; do iperf3 -c " + serviceC.Spec.ClusterIP + " -u -b 2 -p 15201 -V -N -t 10 -Z >> file.txt;done; cat file.txt"
 		fmt.Println("Creating UDP Iperf Client: " + command)
 		jobsClient := clientset.BatchV1().Jobs(namespaceUDP)
 		job := &batchv1.Job{
@@ -396,9 +401,12 @@ func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 		velspeed, cpuClient, cpuServer := parseVel(str, clientset, namespaceUDP)
 		fmt.Printf("%d %f Gbits/sec 	clientcpu: %f	server cpu :%f\n", i, velspeed, cpuClient, cpuServer)
 		//todo vedere cosa succede con float 32, per ora 64
-		netSpeeds[i] = velspeed
-		cpuClie[i] = cpuClient
-		cpuServ[i] = cpuServer
+		for j := 0; j < 3; j++ {
+			netSpeeds[part] = velspeed[j]
+			cpuClie[part] = cpuClient[j]
+			cpuServ[part] = cpuServer[j]
+			part++
+		}
 		utils.CleanCluster(clientset, namespaceUDP, "app=iperfserver", "app=iperfclient", deplName, jobName, pod.Name)
 	}
 

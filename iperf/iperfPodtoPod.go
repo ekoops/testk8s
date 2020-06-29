@@ -21,7 +21,7 @@ import (
 var deplName = "serveriperf3"
 var namespace = "testiperf"
 var jobName = "jobiperfclient"
-var iteration = 3
+var iteration = 12
 var node = ""
 var node2 = "node2"
 
@@ -43,7 +43,8 @@ func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 	cpuconfS := make([]float64, iteration)
 	//create one deployment of iperf server
 	//todo vedere come poter velocizzare con nomi diversi per deployment etc (tipo random string per ogni deployment
-	for i := 0; i < iteration; i++ {
+	part := 0
+	for i := 0; i < (iteration / 4); i++ {
 		dep := createIperfDeployment("5002", namespace)
 		fmt.Println("Creating deployment...")
 		res, errDepl := clientset.AppsV1().Deployments(namespace).Create(context.TODO(), dep, metav1.CreateOptions{})
@@ -109,7 +110,7 @@ func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 			fmt.Printf("Server IP: %s\n", podIP)
 
 		}
-		command := "iperf3 -c " + podI.Status.PodIP + " -p 5002 -V -N -t 10 -Z -A 1,2 > file.txt; cat file.txt"
+		command := "for i in 0 1 2; do iperf3 -c " + podI.Status.PodIP + " -p 5002 -V -N -t 10 -Z -A 1,2 >> file.txt; done; cat file.txt"
 		fmt.Println("Creating Iperf Client: " + command)
 		jobsClient := clientset.BatchV1().Jobs(namespace)
 		job := &batchv1.Job{
@@ -200,9 +201,12 @@ func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 
 		fmt.Printf("%d %f Gbits/sec 	clientcpu: %f	server cpu :%f\n ", i, velspeed, cpuClient, cpuServer)
 		//todo vedere cosa succede con float 32, per ora 64
-		netSpeeds[i] = velspeed
-		cpuClie[i] = cpuClient
-		cpuServ[i] = cpuServer
+		for j := 0; j < 3; j++ {
+			netSpeeds[part] = velspeed[j]
+			cpuClie[part] = cpuClient[j]
+			cpuServ[part] = cpuServer[j]
+			part++
+		}
 		//Clean the cluster
 		utils.CleanCluster(clientset, namespace, "app=iperfserver", "app=iperfclient", deplName, jobName, pod.Name)
 	}
@@ -228,7 +232,8 @@ func IperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 	cpuconfS := make([]float64, iteration)
 
 	//create one deployment of iperf server UDP
-	for i := 0; i < iteration; i++ {
+	part := 0
+	for i := 0; i < (iteration / 4); i++ {
 		dep := createIperfDeployment("5003", namespaceUDP)
 		fmt.Println("Creating deployment...")
 		res, errDepl := clientset.AppsV1().Deployments(namespaceUDP).Create(context.TODO(), dep, metav1.CreateOptions{})
@@ -295,7 +300,7 @@ func IperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 
 		}
 
-		command := "iperf3 -c " + podI.Status.PodIP + " -u -b 0 -p 5003 -V -N -t 10 -Z > file.txt; cat file.txt"
+		command := "for i in 0 1 2; do iperf3 -c " + podI.Status.PodIP + " -u -b 0 -p 5003 -V -N -t 10 -Z >> file.txt; done; cat file.txt"
 		fmt.Println("Creating UDP Iperf Client: " + command)
 		jobsClient := clientset.BatchV1().Jobs(namespaceUDP)
 		job := &batchv1.Job{
@@ -386,10 +391,12 @@ func IperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 
 		fmt.Printf("%d %f Gbits/sec 	clientcpu: %f	server cpu :%f\n", i, velspeed, cpuClient, cpuServer)
 		//todo vedere cosa succede con float 32, per ora 64
-		netSpeeds[i] = velspeed
-		cpuClie[i] = cpuClient
-		cpuServ[i] = cpuServer
-
+		for j := 0; j < 3; j++ {
+			netSpeeds[part] = velspeed[j]
+			cpuClie[part] = cpuClient[j]
+			cpuServ[part] = cpuServer[j]
+			part++
+		}
 		utils.CleanCluster(clientset, namespaceUDP, "app=iperfserver", "app=iperfclient", deplName, jobName, pod.Name)
 	}
 
@@ -399,43 +406,49 @@ func IperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 	return fmt.Sprintf("%f", avgS) + " Gbits/sec, client cpu usage: " + fmt.Sprintf("%f", avgCPUC) + " and server CPU usage: " + fmt.Sprintf("%f", avgCPUS)
 }
 
-func parseVel(str string, clientset *kubernetes.Clientset, ns string) (float64, float64, float64) {
-	var velspeed, serverCPU, clientCPU float64
+func parseVel(strs string, clientset *kubernetes.Clientset, ns string) ([]float64, []float64, []float64) {
+	var velspeed, clientCPU, serverCPU []float64
+	velspeed = make([]float64, 3)
+	clientCPU = make([]float64, 3)
+	serverCPU = make([]float64, 3)
 	var errConv error
-	if strings.Contains(str, "Connection refused") || strings.Contains(str, "Connection timed out") {
-		utils.DeleteNS(clientset, ns)
-		panic("error in client server communication")
-	} else {
-		vectString := strings.Split(str, "0.00-10.00 ")
-		substringSpeed := strings.Split(vectString[1], "  ")
-		vectString[len(vectString)-1] = strings.Replace(vectString[len(vectString)-1], "%", "0", 5)
-		substringCPU := strings.Split(vectString[len(vectString)-1], "(")
-		speed := strings.Split(substringSpeed[2], " ")
-		cpuSend := strings.Split(substringCPU[len(substringCPU)-3], " ")
-		cpuServ := strings.Split(substringCPU[len(substringCPU)-2], " ")
-		clientCPU, errConv = strconv.ParseFloat(cpuSend[len(cpuSend)-2], 64)
-		if errConv != nil {
-			fmt.Println("Errore nel client conversion cpu + " + cpuSend[len(cpuSend)-2])
-			panic(errConv)
-		}
-		serverCPU, errConv = strconv.ParseFloat(cpuServ[len(cpuServ)-2], 64)
-		if errConv != nil {
-			fmt.Println("Errore nel server conversion cpu " + cpuServ[len(cpuServ)-2])
-			panic(errConv)
-		}
-		velspeed, errConv = strconv.ParseFloat(speed[0], 64)
-		if errConv != nil {
-			fmt.Println("Errore nel speed conversion " + speed[0])
-			panic(errConv)
-		}
+	str := strings.Split(strs, "iperf 3.0.7\n")
+	for i := 0; i < 3; i++ {
+		if strings.Contains(str[i+1], "Connection refused") || strings.Contains(str[i+1], "Connection timed out") {
+			utils.DeleteNS(clientset, ns)
+			panic("error in client server communication")
+		} else {
+			vectString := strings.Split(str[i+1], "0.00-10.00 ")
+			substringSpeed := strings.Split(vectString[1], "  ")
+			vectString[len(vectString)-1] = strings.Replace(vectString[len(vectString)-1], "%", "0", 5)
+			substringCPU := strings.Split(vectString[len(vectString)-1], "(")
+			speed := strings.Split(substringSpeed[2], " ")
+			cpuSend := strings.Split(substringCPU[len(substringCPU)-3], " ")
+			cpuServ := strings.Split(substringCPU[len(substringCPU)-2], " ")
+			clientCPU[i], errConv = strconv.ParseFloat(cpuSend[len(cpuSend)-2], 64)
+			if errConv != nil {
+				fmt.Println("Errore nel client conversion cpu + " + cpuSend[len(cpuSend)-2])
+				panic(errConv)
+			}
+			serverCPU[i], errConv = strconv.ParseFloat(cpuServ[len(cpuServ)-2], 64)
+			if errConv != nil {
+				fmt.Println("Errore nel server conversion cpu " + cpuServ[len(cpuServ)-2])
+				panic(errConv)
+			}
+			velspeed[i], errConv = strconv.ParseFloat(speed[0], 64)
+			if errConv != nil {
+				fmt.Println("Errore nel speed conversion " + speed[0])
+				panic(errConv)
+			}
 
-		switch speed[1] {
-		case "Mbits/sec":
-			velspeed = velspeed / 1000
-		case "Kbits/sec":
-			velspeed = velspeed / 1000000
-		case "Gbits/sec":
-			fmt.Println("Ok, Gbits/sec")
+			switch speed[1] {
+			case "Mbits/sec":
+				velspeed[i] = velspeed[i] / 1000
+			case "Kbits/sec":
+				velspeed[i] = velspeed[i] / 1000000
+			case "Gbits/sec":
+				fmt.Println("Ok, Gbits/sec")
+			}
 		}
 	}
 	fmt.Println(velspeed)
