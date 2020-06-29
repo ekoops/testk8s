@@ -27,6 +27,8 @@ func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 	netSpeeds := make([]float64, iteration)
 	cpuServ := make([]float64, iteration)
 	cpuClie := make([]float64, iteration)
+	cpuconfC := make([]float64, iteration)
+	cpuconfS := make([]float64, iteration)
 
 	if multiple {
 		fmt.Println("the program will create multiple service and endpoints")
@@ -202,7 +204,7 @@ func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 	utils.DeleteBulk(10, clientset, namespace)
 	utils.DeleteNS(clientset, namespace)
 	fmt.Printf("Namespace %s deleted \n", namespace)
-	avgS, avgCPUS, avgCPUC := utils.AvgSpeed(netSpeeds, cpuClie, cpuServ, float64(iteration))
+	avgS, avgCPUS, avgCPUC, _, _ := utils.AvgSpeed(netSpeeds, cpuClie, cpuServ, cpuconfC, cpuconfS, float64(iteration))
 	return fmt.Sprintf("%f", avgS) + " Gbits/sec, client cpu usage: " + fmt.Sprintf("%f", avgCPUC) + " and server CPU usage: " + fmt.Sprintf("%f", avgCPUS)
 
 }
@@ -213,6 +215,8 @@ func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 	nsCR := utils.CreateNS(clientset, namespaceUDP)
 	fmt.Printf("Namespace %s created \n", nsCR.GetName())
 	netSpeeds := make([]float64, iteration)
+	cpuconfC := make([]float64, iteration)
+	cpuconfS := make([]float64, iteration)
 	svc := apiv1.Service{
 		TypeMeta: metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{
@@ -400,7 +404,7 @@ func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 
 	utils.DeleteNS(clientset, namespaceUDP)
 	fmt.Printf("Namespace %s deleted \n", namespaceUDP)
-	avgS, avgCPUS, avgCPUC := utils.AvgSpeed(netSpeeds, cpuClie, cpuServ, float64(iteration))
+	avgS, avgCPUS, avgCPUC, _, _ := utils.AvgSpeed(netSpeeds, cpuClie, cpuServ, cpuconfC, cpuconfS, float64(iteration))
 	return fmt.Sprintf("%f", avgS) + " Gbits/sec, client cpu usage: " + fmt.Sprintf("%f", avgCPUC) + " and server CPU usage: " + fmt.Sprintf("%f", avgCPUS)
 }
 
@@ -413,6 +417,9 @@ func TCPHairpinservice(clientset *kubernetes.Clientset, multiple bool) string {
 		utils.CreateBulk(10, clientset, namespace)
 	}
 	netSpeeds := make([]float64, iteration)
+
+	/*cpuconfC := make([]float64, iteration)
+	cpuconfS := make([]float64, iteration)*/
 	svcCr := createTCPService(clientset, "iperfhairpin")
 
 	for i := 0; i < iteration; i++ {
