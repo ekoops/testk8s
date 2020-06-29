@@ -530,7 +530,7 @@ func calculateSpeed(str string, clientset *kubernetes.Clientset, ns string, add 
 					}
 
 					if strings.Contains(strspeed[3], " ") {
-						strspeeds[2] = strings.Replace(strspeeds[3], " ", "0", 5)
+						strspeeds[3] = strings.Replace(strspeeds[3], " ", "0", 5)
 					}
 					cpuS[i-1], errConv = strconv.ParseFloat(strspeed[3], 64)
 					if errConv != nil {
