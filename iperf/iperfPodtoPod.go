@@ -21,13 +21,15 @@ import (
 var deplName = "serveriperf3"
 var namespace = "testiperf"
 var jobName = "jobiperfclient"
-var iteration = 12
+var iteration = 3
 var node = ""
 var node2 = "node2"
 
 var netSpeeds []float64
 var cpuServ []float64
+var cpuconfC []float64
 var cpuClie []float64
+var cpuconfS []float64
 
 func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 
@@ -37,6 +39,8 @@ func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 	netSpeeds := make([]float64, iteration)
 	cpuServ := make([]float64, iteration)
 	cpuClie := make([]float64, iteration)
+	cpuconfC := make([]float64, iteration)
+	cpuconfS := make([]float64, iteration)
 	//create one deployment of iperf server
 	//todo vedere come poter velocizzare con nomi diversi per deployment etc (tipo random string per ogni deployment
 	for i := 0; i < iteration; i++ {
@@ -205,7 +209,7 @@ func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 	utils.DeleteNS(clientset, namespace)
 	fmt.Printf("Test Namespace: %s deleted\n", namespace)
 	time.Sleep(10 * time.Second)
-	avgS, avgCPUS, avgCPUC := utils.AvgSpeed(netSpeeds, cpuClie, cpuServ, float64(iteration))
+	avgS, avgCPUS, avgCPUC, _, _ := utils.AvgSpeed(netSpeeds, cpuClie, cpuServ, cpuconfC, cpuconfS, float64(iteration))
 	return fmt.Sprintf("%f", avgS) + " Gbits/sec, client cpu usage: " + fmt.Sprintf("%f", avgCPUC) + " and server CPU usage: " + fmt.Sprintf("%f", avgCPUS)
 
 }
@@ -220,6 +224,8 @@ func IperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 	netSpeeds := make([]float64, iteration)
 	cpuServ := make([]float64, iteration)
 	cpuClie := make([]float64, iteration)
+	cpuconfC := make([]float64, iteration)
+	cpuconfS := make([]float64, iteration)
 
 	//create one deployment of iperf server UDP
 	for i := 0; i < iteration; i++ {
@@ -389,7 +395,7 @@ func IperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 
 	utils.DeleteNS(clientset, namespaceUDP)
 	time.Sleep(10 * time.Second)
-	avgS, avgCPUS, avgCPUC := utils.AvgSpeed(netSpeeds, cpuClie, cpuServ, float64(iteration))
+	avgS, avgCPUS, avgCPUC, _, _ := utils.AvgSpeed(netSpeeds, cpuClie, cpuServ, cpuconfC, cpuconfS, float64(iteration))
 	return fmt.Sprintf("%f", avgS) + " Gbits/sec, client cpu usage: " + fmt.Sprintf("%f", avgCPUC) + " and server CPU usage: " + fmt.Sprintf("%f", avgCPUS)
 }
 

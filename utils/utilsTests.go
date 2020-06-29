@@ -22,7 +22,7 @@ func SetNodeSelector(casus int) string {
 	return node
 }
 
-func AvgSpeed(speeds []float64, cpuS []float64, cpuC []float64, div float64) (float64, float64, float64) {
+func AvgSpeed(speeds []float64, cpuS []float64, cpuC []float64, confC []float64, confS []float64, div float64) (float64, float64, float64, float64, float64) {
 	var max = 0.0
 	var countM = -1
 	var countm = -1
@@ -44,18 +44,27 @@ func AvgSpeed(speeds []float64, cpuS []float64, cpuC []float64, div float64) (fl
 	cpuS[countm] = 0.0
 	cpuC[countM] = 0.0
 	cpuS[countM] = 0.0
+	confC[countM] = 0.0
+	confC[countm] = 0.0
+	confS[countM] = 0.0
+	confS[countm] = 0.0
 
-	var sumSp, sumC, sumS float64
+	var sumSp, sumC, sumS, sumConfC, sumConfS float64
 	sumSp = 0.0
 	sumC = 0.0
 	sumS = 0.0
+	sumConfC = 0.0
+	sumConfS = 0.0
+
 	for i := 0; i < int(div); i++ {
 		sumSp = sumSp + speeds[i]
 		sumS = sumS + cpuS[i]
 		sumC = sumC + cpuC[i]
+		sumConfC = sumConfC + confC[i]
+		sumConfS = sumConfS + confS[i]
 	}
 	div = div - 2
-	return sumSp / div, sumS / div, sumC / div
+	return sumSp / div, sumS / div, sumC / div, sumConfC / div, sumConfS / div
 }
 
 func CreateNS(clientset *kubernetes.Clientset, ns string) *apiv1.Namespace {

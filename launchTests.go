@@ -1,20 +1,47 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"os"
 	"path/filepath"
 	"testk8s/iperf"
+	"testk8s/netperf"
 	"time"
 )
 
 var stars = "*****************************************************************\n"
+var labels [2]map[string]string
 
 func main() {
 	clientset := initialSetting()
+	nodes, errNodes := clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+	if errNodes != nil {
+		fmt.Println(errNodes)
+		return
+	}
+	count := 1
+	var errLabel error
+	for i := 0; i < len(nodes.Items); i++ {
+		if _, master := nodes.Items[i].Labels["node-role.kubernetes.io/master"]; !master {
+			labels[count] = nodes.Items[i].GetLabels()
+			nodes.Items[i].Labels["type"] = "node" + fmt.Sprintf("%d", count)
+			_, errLabel = clientset.CoreV1().Nodes().Update(context.TODO(), &nodes.Items[i], metav1.UpdateOptions{})
+			if errLabel != nil {
+				fmt.Println(errLabel)
+				return
+			}
+			count++
+		}
+
+		if count == 3 {
+			break
+		}
+	}
 	fileoutput, err := os.Create(time.Now().String())
 	if err != nil {
 		fmt.Println(err)
@@ -36,54 +63,53 @@ func main() {
 	fmt.Printf("\n%s\navg speed of the network Iperf3 UDP: %s\n %s\n", stars, output, stars)
 	fileoutput.WriteString("\n" + stars + "\n" + "avg speed of the network Iperf3 UDP: " + output + "\n" + stars + "\n")
 
-	/*
-		output = netperf.NetperfTCPPodtoPod(clientset, 1)
-		fmt.Printf("\n%s\navg speed of the network Netperf TCP: %s\n %s\n",stars,output,stars)
-		fileoutput.WriteString("\n"+stars+"\n"+"avg speed of the network Netperf TCP: "+output+"\n"+stars+"\n")
+	output = netperf.NetperfTCPPodtoPod(clientset, 1)
+	fmt.Printf("\n%s\navg speed of the network Netperf TCP: %s\n %s\n", stars, output, stars)
+	fileoutput.WriteString("\n" + stars + "\n" + "avg speed of the network Netperf TCP: " + output + "\n" + stars + "\n")
 
-		output = netperf.NetperfUDPPodtoPod(clientset, 1)
-		fmt.Printf("\n%s\navg speed of the network Netperf UDP: %s\n %s\n",stars, output,stars)
-		fileoutput.WriteString("\n"+stars+"\n"+"avg speed of the network Netperf UDP: "+output+"\n"+stars+"\n")
-	*/
+	output = netperf.NetperfUDPPodtoPod(clientset, 1)
+	fmt.Printf("\n%s\navg speed of the network Netperf UDP: %s\n %s\n", stars, output, stars)
+	fileoutput.WriteString("\n" + stars + "\n" + "avg speed of the network Netperf UDP: " + output + "\n" + stars + "\n")
 
 	fmt.Println(time.Now())
-
-	output = iperf.TCPservice(clientset, 1, false)
-	fmt.Printf("\n%s\navg speed of network Iperf3 TCP with service (1 service in the cluster): %s\n %s\n", stars, output, stars)
-	fileoutput.WriteString("\n" + stars + "\n" + "avg speed of network Iperf3 TCP with service (1 service in the cluster): " + output + "\n" + stars + "\n")
 	/*
-		output = iperf.UDPservice(clientset, 1, false)
+		output = iperf.TCPservice(clientset, 1, false)
+		fmt.Printf("\n%s\navg speed of network Iperf3 TCP with service (1 service in the cluster): %s\n %s\n", stars, output, stars)
+		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of network Iperf3 TCP with service (1 service in the cluster): " + output + "\n" + stars + "\n")*/
+	/*
+		output := iperf.UDPservice(clientset, 1, false)
 		fmt.Printf("\n%s\navg speed of network Iperf3 UDP with service (1 service in the cluster): %s\n %s\n",stars, output,stars)
 		fileoutput.WriteString("\n"+stars+"\n"+"avg speed of network Iperf3 UDP with service (1 service in the cluster): "+output+"\n"+stars+"\n")
-
-		output = netperf.TCPservice(clientset, 1, false)
-		fmt.Printf("\n%s\navg speed of network Netperf TCP with service (1 service in the cluster): %s\n %s\n",stars, output,stars)
-		fileoutput.WriteString("\n"+stars+"\n"+"avg speed of network Iperf3 TCP with service (1 service in the cluster): "+output+"\n"+stars+"\n")
-
-		output = netperf.UDPservice(clientset, 1, false)
-		fmt.Printf("\n%s\navg speed of network Netperf UDP with service (1 service in the cluster): %s\n %s\n",stars, output,stars)
-		fileoutput.WriteString("\n"+stars+"\n"+"avg speed of network Iperf3 UDP with service (1 service in the cluster): "+output+"\n"+stars+"\n")
 	*/
 
-	fmt.Println(time.Now())
+	output = netperf.TCPservice(clientset, 1, false)
+	fmt.Printf("\n%s\navg speed of network Netperf TCP with service (1 service in the cluster): %s\n %s\n", stars, output, stars)
+	fileoutput.WriteString("\n" + stars + "\n" + "avg speed of network Iperf3 TCP with service (1 service in the cluster): " + output + "\n" + stars + "\n")
 
-	output = iperf.TCPservice(clientset, 1, true)
-	fmt.Printf("\n%s\navg speed of network Iperf3 TCP with service (multiple services in the cluster): %s\n %s\n", stars, output, stars)
-	fileoutput.WriteString("\n" + stars + "\n" + "avg speed of network Iperf3 TCP with service (multiple services in the cluster): " + output + "\n" + stars + "\n")
+	output = netperf.UDPservice(clientset, 1, false)
+	fmt.Printf("\n%s\navg speed of network Netperf UDP with service (1 service in the cluster): %s\n %s\n", stars, output, stars)
+	fileoutput.WriteString("\n" + stars + "\n" + "avg speed of network Iperf3 UDP with service (1 service in the cluster): " + output + "\n" + stars + "\n")
+
 	/*
-		output = iperf.UDPservice(clientset, 1, true)
-		fmt.Printf("\n%s\navg speed of network Iperf3 UDP with service (multiple services in the cluster): %s\n %s\n",stars, output,stars)
-		fileoutput.WriteString("\n"+stars+"\n"+"avg speed of network Iperf3 UDP with service (multiple services in the cluster): "+output+"\n"+stars+"\n")
+		fmt.Println(time.Now())
 
-		output = netperf.TCPservice(clientset, 1, true)
-		fmt.Printf("\n%s\navg speed of network Netperf TCP with service (multiple services in the cluster): %s\n %s\n",stars, output,stars)
-		fileoutput.WriteString("\n"+stars+"\n"+"avg speed of network Iperf3 TCP with service (multiple services in the cluster): "+output+"\n"+stars+"\n")
+		output = iperf.TCPservice(clientset, 1, true)
+		fmt.Printf("\n%s\navg speed of network Iperf3 TCP with service (multiple services in the cluster): %s\n %s\n", stars, output, stars)
+		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of network Iperf3 TCP with service (multiple services in the cluster): " + output + "\n" + stars + "\n")
+		/*
+			output = iperf.UDPservice(clientset, 1, true)
+			fmt.Printf("\n%s\navg speed of network Iperf3 UDP with service (multiple services in the cluster): %s\n %s\n",stars, output,stars)
+			fileoutput.WriteString("\n"+stars+"\n"+"avg speed of network Iperf3 UDP with service (multiple services in the cluster): "+output+"\n"+stars+"\n")
 
-		output = netperf.UDPservice(clientset, 1, true)
-		fmt.Printf("\n%s\navg speed of network Netperf UDP with service (multiple services in the cluster): %s\n %s\n",stars, output,stars)
-		fileoutput.WriteString("\n"+stars+"\n"+"avg speed of network Iperf3 UDP with service (multiple services in the cluster): "+output+"\n"+stars+"\n")
+			output = netperf.TCPservice(clientset, 1, true)
+			fmt.Printf("\n%s\navg speed of network Netperf TCP with service (multiple services in the cluster): %s\n %s\n",stars, output,stars)
+			fileoutput.WriteString("\n"+stars+"\n"+"avg speed of network Iperf3 TCP with service (multiple services in the cluster): "+output+"\n"+stars+"\n")
+
+			output = netperf.UDPservice(clientset, 1, true)
+			fmt.Printf("\n%s\navg speed of network Netperf UDP with service (multiple services in the cluster): %s\n %s\n",stars, output,stars)
+			fileoutput.WriteString("\n"+stars+"\n"+"avg speed of network Iperf3 UDP with service (multiple services in the cluster): "+output+"\n"+stars+"\n")
 	*/
-	fmt.Println("-----------------------------------------------------------------")
+	/*fmt.Println("-----------------------------------------------------------------")
 	fileoutput.WriteString("-----------------------------------------------------------------")
 	fileoutput.WriteString("-----------------------------------------------------------------")
 	fmt.Println("-----------------------------------------------------------------")
@@ -109,7 +135,7 @@ func main() {
 		fileoutput.WriteString("\n"+stars+"\n"+"avg speed of the network Netperf UDP (same node): "+output+"\n"+stars+"\n")
 
 	*/
-	fmt.Println(time.Now())
+	/*fmt.Println(time.Now())
 
 	output = iperf.TCPservice(clientset, 2, false)
 	fmt.Printf("\n%s\navg speed of network Iperf3 TCP with service(same node) (1 service in the cluster): %s\n %s\n", stars, output, stars)
@@ -128,7 +154,7 @@ func main() {
 		fileoutput.WriteString("\n"+stars+"\n"+"avg speed of network Iperf3 UDP with service (1 service in the cluster): "+output+"\n"+stars+"\n")
 
 	*/
-	fmt.Println(time.Now())
+	/*fmt.Println(time.Now())
 
 	output = iperf.TCPservice(clientset, 2, true)
 	fmt.Printf("\n%s\navg speed of network Iperf3 TCP with service(same node) (multiple services in the cluster): %s\n %s\n", stars, output, stars)
@@ -171,6 +197,25 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 		return
+	}
+
+	count = 1
+	for i := 0; i < len(nodes.Items); i++ {
+		if _, master := nodes.Items[i].Labels["node-role.kubernetes.io/master"]; !master {
+			if _, nodeLab := nodes.Items[i].Labels["node-role.kubernetes.io/master"]; !nodeLab {
+				nodes.Items[i].SetLabels(labels[count])
+			}
+			_, errLabel = clientset.CoreV1().Nodes().Update(context.TODO(), &nodes.Items[i], metav1.UpdateOptions{})
+			if errLabel != nil {
+				fmt.Println(errLabel)
+				return
+			}
+			count++
+		}
+
+		if count == 3 {
+			break
+		}
 	}
 }
 
