@@ -28,7 +28,7 @@ func main() {
 	var errLabel error
 	for i := 0; i < len(nodes.Items); i++ {
 		if _, master := nodes.Items[i].Labels["node-role.kubernetes.io/master"]; !master {
-			labels[count] = nodes.Items[i].GetLabels()
+			labels[count-1] = nodes.Items[i].GetLabels()
 			nodes.Items[i].Labels["type"] = "node" + fmt.Sprintf("%d", count)
 			_, errLabel = clientset.CoreV1().Nodes().Update(context.TODO(), &nodes.Items[i], metav1.UpdateOptions{})
 			if errLabel != nil {
@@ -203,7 +203,7 @@ func main() {
 	for i := 0; i < len(nodes.Items); i++ {
 		if _, master := nodes.Items[i].Labels["node-role.kubernetes.io/master"]; !master {
 			if _, nodeLab := nodes.Items[i].Labels["node-role.kubernetes.io/master"]; !nodeLab {
-				nodes.Items[i].SetLabels(labels[count])
+				nodes.Items[i].SetLabels(labels[count-1])
 			}
 			_, errLabel = clientset.CoreV1().Nodes().Update(context.TODO(), &nodes.Items[i], metav1.UpdateOptions{})
 			if errLabel != nil {
