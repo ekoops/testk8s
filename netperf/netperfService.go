@@ -92,7 +92,7 @@ func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 		fmt.Printf("Service IP: %s\n", svcIP)
 	}
 
-	command := "for i in 0 1 2 3 4;" + "do netperf -H " + serviceC.Spec.ClusterIP + " -i 30,2 -j -p 15001 -v 2 -c -- -D -P ,35001>> file.txt; done; cat file.txt"
+	command := "for i in 0 1 2 3 4;" + "do netperf -H " + serviceC.Spec.ClusterIP + " -i 30,2 -j -p 15001 -v 2 -c -C -- -D -P ,35001>> file.txt; done; cat file.txt"
 	fmt.Println("Creating Netperf Client: " + command)
 	jobsClient := clientset.BatchV1().Jobs(namespace)
 	job := &batchv1.Job{
@@ -294,7 +294,7 @@ func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 		fmt.Printf("Service IP: %s\n", svcIP)
 	}
 
-	command := "for i in 0 1 2 3 4; " + "do netperf -t UDP_STREAM -H " + serviceC.Spec.ClusterIP + " -i 30,2 -p 15201 -v 2 -c -- -P ,35002 -D >> file.txt;done; cat file.txt"
+	command := "for i in 0 1 2 3 4; " + "do netperf -t UDP_STREAM -H " + serviceC.Spec.ClusterIP + " -i 30,2 -p 15201 -v 2 -c -C -- -P ,35002 -D >> file.txt;done; cat file.txt"
 	fmt.Println("Creating UDP Netperf Client: " + command)
 	jobsClient := clientset.BatchV1().Jobs(namespaceUDP)
 	job := &batchv1.Job{
