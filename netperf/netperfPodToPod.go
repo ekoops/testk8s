@@ -295,7 +295,7 @@ func NetperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 	}
 
 	command := "for i in 0 1 2 3 4 ; " +
-		"do netperf -t UDP_STREAM -H " + podI.Status.PodIP + " -i 30,2 -p 15003 -v 2 -c -C -- -R 1 -D >> file.txt; done; " +
+		"do netperf -t UDP_STREAM -H " + podI.Status.PodIP + " -i 30,2 -p 15003 -v 2 -c -C -T 1,2 -- -R 1 -D >> file.txt; done; " +
 		"cat file.txt"
 	fmt.Println("Creating UDP Netperf Client: " + command)
 	jobsClient := clientset.BatchV1().Jobs(namespaceUDP)
@@ -471,7 +471,8 @@ func calculateSpeed(str string, clientset *kubernetes.Clientset, ns string, add 
 
 	//works on strings
 	iterationString := strings.Split(str, "MIGRATED")
-	for i := 1; i <= iteration; i++ {
+	//todo da mettere iteration
+	for i := 1; i <= 3; i++ {
 
 		if strings.Contains(iterationString[i], "Connection refused") || strings.Contains(iterationString[i], "establish control") || strings.Contains(iterationString[i], "Connection time out") {
 			utils.DeleteNS(clientset, ns)
@@ -528,7 +529,7 @@ func calculateSpeed(str string, clientset *kubernetes.Clientset, ns string, add 
 						fmt.Println("ERRORE Warning: " + strspeeds[2])
 						panic(errConv)
 					}
-					fmt.Printf("arrivo qui %d %f\n", len(strspeed[3]))
+					fmt.Printf("arrivo qui %d\n", len(strspeed[3]))
 					if strings.Contains(strspeed[3], " ") {
 						strspeed[3] = strings.Replace(strspeed[3], " ", "0", 5)
 					}
