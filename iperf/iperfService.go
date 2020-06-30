@@ -309,7 +309,7 @@ func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 			fmt.Printf("Service IP: %s\n", svcIP)
 		}
 
-		command := "for i in 0 1 2; do iperf3 -c " + serviceC.Spec.ClusterIP + " -u -b 2 -p 15201 -V -N -t 10 -Z >> file.txt;done; cat file.txt"
+		command := "for i in 0 1 2; do iperf3 -c " + serviceC.Spec.ClusterIP + " -u -b 2 -p 5003 -V -N -t 10 -Z >> file.txt;done; cat file.txt"
 		fmt.Println("Creating UDP Iperf Client: " + command)
 		jobsClient := clientset.BatchV1().Jobs(namespaceUDP)
 		job := &batchv1.Job{

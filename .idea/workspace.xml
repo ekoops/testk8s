@@ -21,9 +21,7 @@
   <component name="ChangeListManager">
     <list default="true" id="810481c3-0236-4391-aeb1-7151369e7d97" name="Default Changelist" comment="test UDP service">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/1593504616" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/iperf/iperfService.go" beforeDir="false" afterPath="$PROJECT_DIR$/iperf/iperfService.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/launchTests.go" beforeDir="false" afterPath="$PROJECT_DIR$/launchTests.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -203,10 +201,10 @@
       <screen x="45" y="27" width="1321" height="741" />
     </state>
     <state x="172" y="85" width="1056" height="622" key="MergeDialog/45.27.1321.741@45.27.1321.741" timestamp="1592896387168" />
-    <state x="300" y="118" width="800" height="556" key="Vcs.Push.Dialog.v2" timestamp="1593509267269">
+    <state x="300" y="118" width="800" height="556" key="Vcs.Push.Dialog.v2" timestamp="1593513008140">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
-    <state x="300" y="118" width="800" height="556" key="Vcs.Push.Dialog.v2/45.27.1321.741@45.27.1321.741" timestamp="1593509267269" />
+    <state x="300" y="118" width="800" height="556" key="Vcs.Push.Dialog.v2/45.27.1321.741@45.27.1321.741" timestamp="1593513008140" />
     <state width="670" height="371" key="XDebugger.FullValuePopup" timestamp="1593501854557">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
