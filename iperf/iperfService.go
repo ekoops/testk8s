@@ -230,10 +230,8 @@ func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 		},
 		Spec: apiv1.ServiceSpec{
 			Ports: []apiv1.ServicePort{{
-				Name:       "udpport",
-				Protocol:   apiv1.ProtocolUDP,
-				Port:       15201,
-				TargetPort: intstr.IntOrString{intstr.Type(0), 15201, "15201"},
+				Protocol: apiv1.ProtocolUDP,
+				Port:     5003,
 			}},
 			Selector: map[string]string{"app": "iperfserver"},
 		},
@@ -246,7 +244,7 @@ func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 
 	part := 0
 	for i := 0; i < (iteration / 4); i++ {
-		dep := createIperfDeployment("15201", namespaceUDP)
+		dep := createIperfDeployment("5003", namespaceUDP)
 		fmt.Println("Creating deployment...")
 		res, errDepl := clientset.AppsV1().Deployments(namespaceUDP).Create(context.TODO(), dep, metav1.CreateOptions{})
 		if errDepl != nil {
