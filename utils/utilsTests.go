@@ -64,7 +64,7 @@ func AvgSpeed(speeds []float64, cpuS []float64, cpuC []float64, confC []float64,
 		sumConfS = sumConfS + confS[i]
 	}
 	div = div - 2
-	return sumSp / div, sumS / div, sumC / div, sumConfC / div, sumConfS / div
+	return sumSp / div, sumC / div, sumS / div, sumConfC / div, sumConfS / div
 }
 
 func CreateNS(clientset *kubernetes.Clientset, ns string) *apiv1.Namespace {

@@ -414,7 +414,7 @@ func parseVel(strs string, clientset *kubernetes.Clientset, ns string) ([]float6
 	var errConv error
 	str := strings.Split(strs, "iperf 3.0.7\n")
 	for i := 0; i < 3; i++ {
-		if strings.Contains(str[i+1], "Connection refused") || strings.Contains(str[i+1], "Connection timed out") {
+		if strings.Contains(strs, "Connection timed out") || strings.Contains(str[i+1], "Connection refused") || strings.Contains(str[i+1], "Connection timed out") {
 			utils.DeleteNS(clientset, ns)
 			panic("error in client server communication")
 		} else {
