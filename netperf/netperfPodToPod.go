@@ -490,7 +490,7 @@ func calculateSpeed(str string, clientset *kubernetes.Clientset, ns string, add 
 					panic(errConv)
 				}
 				if strings.Contains(strspeed[4], " ") {
-					strspeed[3] = strings.Replace(strspeed[4], " ", "0", 5)
+					strspeed[4] = strings.Replace(strspeed[4], " ", "0", 5)
 				}
 				cpuC[i-1], errConv = strconv.ParseFloat(strspeed[3], 64)
 				if errConv != nil {
@@ -528,15 +528,17 @@ func calculateSpeed(str string, clientset *kubernetes.Clientset, ns string, add 
 						fmt.Println("ERRORE Warning: " + strspeeds[2])
 						panic(errConv)
 					}
-
+					fmt.Printf("arrivo qui %d %f\n", len(strspeed[3]))
 					if strings.Contains(strspeed[3], " ") {
-						strspeeds[3] = strings.Replace(strspeeds[3], " ", "0", 5)
+						strspeed[3] = strings.Replace(strspeed[3], " ", "0", 5)
 					}
 					cpuS[i-1], errConv = strconv.ParseFloat(strspeed[3], 64)
 					if errConv != nil {
 						fmt.Println("ERRORE Warning: " + strspeed[3])
 						panic(errConv)
 					}
+					fmt.Printf("supero senza motivi apparenti \n")
+
 				} else {
 					vectString := strings.Split(iterationString[i], "\n")
 					if add == -1 {
@@ -648,5 +650,6 @@ func warnings(vectString []string) (float64, float64, float64) {
 		fmt.Printf("ERRORE Warning: %f\n ", ret3)
 		panic(ret3)
 	}
+	fmt.Printf("sto per ritornare! %f %f %f\n ", ret1, ret2, ret3)
 	return ret1, ret2, ret3
 }
