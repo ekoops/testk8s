@@ -22,11 +22,13 @@ func SetNodeSelector(casus int) string {
 	return node
 }
 
-func AvgSpeed(speeds []float64, cpuS []float64, cpuC []float64, confC []float64, confS []float64, div float64) (float64, float64, float64, float64, float64) {
+func AvgSpeed(speeds []float64, cpuC []float64, cpuS []float64, confC []float64, confS []float64, div float64) (float64, float64, float64, float64, float64) {
+	var sumSp, sumC, sumS, sumConfC, sumConfS float64
 	var max = 0.0
 	var countM = -1
 	var countm = -1
 	var min = 10000.0
+
 	for i := 0; i < int(div); i++ {
 		if max < speeds[i] {
 			max = speeds[i]
@@ -40,31 +42,39 @@ func AvgSpeed(speeds []float64, cpuS []float64, cpuC []float64, confC []float64,
 	fmt.Printf("\nvalore max: %f e valore min: %f\n", speeds[countM], speeds[countm])
 	speeds[countM] = 0.0
 	speeds[countm] = 0.0
-	cpuC[countm] = 0.0
-	cpuS[countm] = 0.0
-	cpuC[countM] = 0.0
-	cpuS[countM] = 0.0
-	confC[countM] = 0.0
-	confC[countm] = 0.0
-	confS[countM] = 0.0
-	confS[countm] = 0.0
 
-	var sumSp, sumC, sumS, sumConfC, sumConfS float64
+	if cpuC[0] != -100.00 {
+		cpuC[countm] = 0.0
+		cpuS[countm] = 0.0
+		cpuC[countM] = 0.0
+		cpuS[countM] = 0.0
+		confC[countM] = 0.0
+		confC[countm] = 0.0
+		confS[countM] = 0.0
+		confS[countm] = 0.0
+		sumC = 0.0
+		sumS = 0.0
+		sumConfC = 0.0
+		sumConfS = 0.0
+
+	}
 	sumSp = 0.0
-	sumC = 0.0
-	sumS = 0.0
-	sumConfC = 0.0
-	sumConfS = 0.0
 
 	for i := 0; i < int(div); i++ {
 		sumSp = sumSp + speeds[i]
-		sumS = sumS + cpuS[i]
-		sumC = sumC + cpuC[i]
-		sumConfC = sumConfC + confC[i]
-		sumConfS = sumConfS + confS[i]
+
+		if cpuC[0] != -100.00 {
+			sumS = sumS + cpuS[i]
+			sumC = sumC + cpuC[i]
+			sumConfC = sumConfC + confC[i]
+			sumConfS = sumConfS + confS[i]
+		}
 	}
 	div = div - 2
-	return sumSp / div, sumC / div, sumS / div, sumConfC / div, sumConfS / div
+	if cpuC[0] != -100.00 {
+		return sumSp / div, sumC / div, sumS / div, sumConfC / div, sumConfS / div
+	}
+	return sumSp / div, 0.0, 0.0, 0.0, 0.0
 }
 
 func CreateNS(clientset *kubernetes.Clientset, ns string) *apiv1.Namespace {
