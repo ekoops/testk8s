@@ -21,6 +21,7 @@ import (
 var deplName = "serveriperf3"
 var namespace = "testiperf"
 var jobName = "jobiperfclient"
+var image = "networkstatic/iperf3"
 var iteration = 12
 var node = ""
 var node2 = "node2"
@@ -44,8 +45,9 @@ func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 	//create one deployment of iperf server
 	//todo vedere come poter velocizzare con nomi diversi per deployment etc (tipo random string per ogni deployment
 	part := 0
-	for i := 0; i < (iteration / 4); i++ {
-		dep := createIperfDeployment("5002", namespace)
+	for i := 0; i <= (iteration / 4); i++ {
+		commandD := "iperf3 -s -p 5002 -V"
+		dep := createIperfDeployment(namespace, image, commandD)
 		fmt.Println("Creating deployment...")
 		res, errDepl := clientset.AppsV1().Deployments(namespace).Create(context.TODO(), dep, metav1.CreateOptions{})
 		if errDepl != nil {
@@ -110,7 +112,7 @@ func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 			fmt.Printf("Server IP: %s\n", podIP)
 
 		}
-		command := "for i in 0 1 2; do iperf3 -c " + podI.Status.PodIP + " -p 5002 -V -N -t 10 -Z -A 1,2 >> file.txt; done; cat file.txt"
+		command := "for i in 0 1 2; do sleep 5; iperf3 -c " + podI.Status.PodIP + " -p 5002 -V -N -t 10 -Z -A 1,2 >> file.txt; done; cat file.txt"
 		fmt.Println("Creating Iperf Client: " + command)
 		jobsClient := clientset.BatchV1().Jobs(namespace)
 		job := &batchv1.Job{
@@ -195,8 +197,14 @@ func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 			}
 		}
 
-		//works on strings
 		fmt.Println(str)
+		if strings.Contains(str, "error - unable") {
+			i = i - 1
+			utils.CleanCluster(clientset, namespace, "app=iperfserver", "app=iperfclient", deplName, jobName, pod.Name)
+			continue
+		}
+		//works on strings
+
 		velspeed, cpuClient, cpuServer := parseVel(str, clientset, namespace)
 
 		fmt.Printf("%d %f Gbits/sec 	clientcpu: %f	server cpu :%f\n ", i, velspeed, cpuClient, cpuServer)
@@ -213,7 +221,7 @@ func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 	utils.DeleteNS(clientset, namespace)
 	fmt.Printf("Test Namespace: %s deleted\n", namespace)
 	time.Sleep(10 * time.Second)
-	avgS, avgCPUS, avgCPUC, _, _ := utils.AvgSpeed(netSpeeds, cpuClie, cpuServ, cpuconfC, cpuconfS, float64(iteration))
+	avgS, avgCPUC, avgCPUS, _, _ := utils.AvgSpeed(netSpeeds, cpuClie, cpuServ, cpuconfC, cpuconfS, float64(iteration))
 	return fmt.Sprintf("%f", avgS) + " Gbits/sec, client cpu usage: " + fmt.Sprintf("%f", avgCPUC) + " and server CPU usage: " + fmt.Sprintf("%f", avgCPUS)
 
 }
@@ -233,8 +241,9 @@ func IperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 
 	//create one deployment of iperf server UDP
 	part := 0
-	for i := 0; i < (iteration / 4); i++ {
-		dep := createIperfDeployment("5003", namespaceUDP)
+	for i := 0; i <= (iteration / 4); i++ {
+		commandD := "iperf3 -s -p 5003 -V"
+		dep := createIperfDeployment(namespaceUDP, image, commandD)
 		fmt.Println("Creating deployment...")
 		res, errDepl := clientset.AppsV1().Deployments(namespaceUDP).Create(context.TODO(), dep, metav1.CreateOptions{})
 		if errDepl != nil {
@@ -319,7 +328,7 @@ func IperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 						Containers: []apiv1.Container{
 							{
 								Name:    "iperfclient",
-								Image:   "networkstatic/iperf3",
+								Image:   image,
 								Command: []string{"/bin/bash"},
 								Args:    []string{"-c", command},
 							},
@@ -387,6 +396,11 @@ func IperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 		}
 
 		//works on strings
+		if strings.Contains(str, "error - unable") {
+			i = i - 1
+			utils.CleanCluster(clientset, namespaceUDP, "app=iperfserver", "app=iperfclient", deplName, jobName, pod.Name)
+			continue
+		}
 		velspeed, cpuClient, cpuServer := parseVel(str, clientset, namespaceUDP)
 
 		fmt.Printf("%d %f Gbits/sec 	clientcpu: %f	server cpu :%f\n", i, velspeed, cpuClient, cpuServer)
@@ -402,7 +416,7 @@ func IperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 
 	utils.DeleteNS(clientset, namespaceUDP)
 	time.Sleep(10 * time.Second)
-	avgS, avgCPUS, avgCPUC, _, _ := utils.AvgSpeed(netSpeeds, cpuClie, cpuServ, cpuconfC, cpuconfS, float64(iteration))
+	avgS, avgCPUC, avgCPUS, _, _ := utils.AvgSpeed(netSpeeds, cpuClie, cpuServ, cpuconfC, cpuconfS, float64(iteration))
 	return fmt.Sprintf("%f", avgS) + " Gbits/sec, client cpu usage: " + fmt.Sprintf("%f", avgCPUC) + " and server CPU usage: " + fmt.Sprintf("%f", avgCPUS)
 }
 
@@ -455,7 +469,7 @@ func parseVel(strs string, clientset *kubernetes.Clientset, ns string) ([]float6
 	return velspeed, clientCPU, serverCPU
 }
 
-func createIperfDeployment(port string, ns string) *appsv1.Deployment {
+func createIperfDeployment(ns string, imageDepl string, command string) *appsv1.Deployment {
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      deplName,
@@ -476,9 +490,9 @@ func createIperfDeployment(port string, ns string) *appsv1.Deployment {
 					Containers: []apiv1.Container{
 						{
 							Name:    "iperf3server",
-							Image:   "networkstatic/iperf3",
+							Image:   imageDepl,
 							Command: []string{"/bin/sh"},
-							Args:    []string{"-c", "iperf3 -s -p " + port + " -V"},
+							Args:    []string{"-c", command},
 						},
 					},
 					NodeSelector: map[string]string{"type": node2},

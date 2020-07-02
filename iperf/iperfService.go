@@ -12,11 +12,14 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/pointer"
+	"strconv"
+	"strings"
 	"testk8s/utils"
 )
 
 var nameService = "my-service-iperf"
 var namespaceUDP = "testiperfudp"
+var imageServiceUDP = "leannet/k8s-netperf:latest"
 
 func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool) string {
 
@@ -37,8 +40,9 @@ func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 	svcCr := createTCPService(clientset, "iperfserver")
 
 	part := 0
-	for i := 0; i < (iteration / 4); i++ {
-		dep := createIperfDeployment("5001", namespace)
+	for i := 0; i <= (iteration / 4); i++ {
+		commandD := "iperf3 -s -p 5001 -V"
+		dep := createIperfDeployment(namespace, image, commandD)
 		fmt.Println("Creating deployment...")
 		res, errDepl := clientset.AppsV1().Deployments(namespace).Create(context.TODO(), dep, metav1.CreateOptions{})
 		if errDepl != nil {
@@ -122,7 +126,7 @@ func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 						Containers: []apiv1.Container{
 							{
 								Name:    "iperfclient",
-								Image:   "networkstatic/iperf3",
+								Image:   image,
 								Command: []string{"/bin/bash"},
 								Args:    []string{"-c", command},
 							},
@@ -189,7 +193,13 @@ func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 		}
 
 		//works on strings
+		//todo stampare su file e non a video
 		fmt.Println(str)
+		if strings.Contains(str, "error - unable") {
+			i = i - 1
+			utils.CleanCluster(clientset, namespace, "app=iperfserver", "app=iperfclient", deplName, jobName, pod.Name)
+			continue
+		}
 		velspeed, cpuClient, cpuServer := parseVel(str, clientset, namespaceUDP)
 		fmt.Printf("%d %f Gbits/sec 	clientcpu: %f	server cpu :%f\n", i, velspeed, cpuClient, cpuServer)
 		//todo vedere cosa succede con float 32, per ora 64
@@ -208,7 +218,7 @@ func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 	utils.DeleteBulk(10, clientset, namespace)
 	utils.DeleteNS(clientset, namespace)
 	fmt.Printf("Namespace %s deleted \n", namespace)
-	avgS, avgCPUS, avgCPUC, _, _ := utils.AvgSpeed(netSpeeds, cpuClie, cpuServ, cpuconfC, cpuconfS, float64(iteration))
+	avgS, avgCPUC, avgCPUS, _, _ := utils.AvgSpeed(netSpeeds, cpuClie, cpuServ, cpuconfC, cpuconfS, float64(iteration))
 	return fmt.Sprintf("%f", avgS) + " Gbits/sec, client cpu usage: " + fmt.Sprintf("%f", avgCPUC) + " and server CPU usage: " + fmt.Sprintf("%f", avgCPUS)
 
 }
@@ -219,8 +229,14 @@ func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 	nsCR := utils.CreateNS(clientset, namespaceUDP)
 	fmt.Printf("Namespace %s created \n", nsCR.GetName())
 	netSpeeds := make([]float64, iteration)
-	cpuconfC := make([]float64, iteration)
-	cpuconfS := make([]float64, iteration)
+	cpuClie := make([]float64, iteration)
+	cpuClie[0] = -100.00
+	cpuServ := make([]float64, iteration)
+
+	if multiple {
+		utils.CreateBulk(10, clientset, namespaceUDP)
+	}
+
 	svc := apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      nameService,
@@ -243,8 +259,9 @@ func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 	fmt.Println("Service UDP my-service-iperf created " + svcCr.GetName())
 
 	part := 0
-	for i := 0; i < (iteration / 4); i++ {
-		dep := createIperfDeployment("5003", namespaceUDP)
+	for i := 0; i <= (iteration / 4); i++ {
+		commandD := "iperf -s -u -p 5003"
+		dep := createIperfDeployment(namespaceUDP, imageServiceUDP, commandD)
 		fmt.Println("Creating deployment...")
 		res, errDepl := clientset.AppsV1().Deployments(namespaceUDP).Create(context.TODO(), dep, metav1.CreateOptions{})
 		if errDepl != nil {
@@ -309,7 +326,7 @@ func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 			fmt.Printf("Service IP: %s\n", svcIP)
 		}
 
-		command := "for i in 0 1 2; do iperf3 -c " + serviceC.Spec.ClusterIP + " -u -b 2 -p 5003 -V -N -t 10 -Z -A 1,2>> file.txt;done; cat file.txt"
+		command := "for i in 0 1 2; do iperf -c " + serviceC.Spec.ClusterIP + " -u -b 10000G -p 5003 -V -i 1 -t 10 >> file.txt;done; cat file.txt"
 		fmt.Println("Creating UDP Iperf Client: " + command)
 		jobsClient := clientset.BatchV1().Jobs(namespaceUDP)
 		job := &batchv1.Job{
@@ -328,8 +345,8 @@ func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 						Containers: []apiv1.Container{
 							{
 								Name:    "iperfclient",
-								Image:   "networkstatic/iperf3",
-								Command: []string{"/bin/bash"},
+								Image:   imageServiceUDP,
+								Command: []string{"/bin/sh"},
 								Args:    []string{"-c", command},
 							},
 						},
@@ -395,14 +412,17 @@ func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 			}
 		}
 
+		if strings.Contains(str, "write failed:") || strings.Contains(str, "read failed:") {
+			i = i - 1
+			utils.CleanCluster(clientset, namespaceUDP, "app=iperfserver", "app=iperfclient", deplName, jobName, pod.Name)
+			continue
+		}
 		//works on strings
-		velspeed, cpuClient, cpuServer := parseVel(str, clientset, namespaceUDP)
-		fmt.Printf("%d %f Gbits/sec 	clientcpu: %f	server cpu :%f\n", i, velspeed, cpuClient, cpuServer)
+		velspeed := parseVelServiceUdp(str, clientset, namespaceUDP)
+		fmt.Printf("%d %f Gbits/sec\n", i, velspeed)
 		//todo vedere cosa succede con float 32, per ora 64
 		for j := 0; j < 3; j++ {
 			netSpeeds[part] = velspeed[j]
-			cpuClie[part] = cpuClient[j]
-			cpuServ[part] = cpuServer[j]
 			part++
 		}
 		utils.CleanCluster(clientset, namespaceUDP, "app=iperfserver", "app=iperfclient", deplName, jobName, pod.Name)
@@ -410,8 +430,41 @@ func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 
 	utils.DeleteNS(clientset, namespaceUDP)
 	fmt.Printf("Namespace %s deleted \n", namespaceUDP)
-	avgS, avgCPUS, avgCPUC, _, _ := utils.AvgSpeed(netSpeeds, cpuClie, cpuServ, cpuconfC, cpuconfS, float64(iteration))
-	return fmt.Sprintf("%f", avgS) + " Gbits/sec, client cpu usage: " + fmt.Sprintf("%f", avgCPUC) + " and server CPU usage: " + fmt.Sprintf("%f", avgCPUS)
+	avgS, _, _, _, _ := utils.AvgSpeed(netSpeeds, cpuClie, cpuServ, cpuconfC, cpuconfS, float64(iteration))
+	return fmt.Sprintf("%f", avgS) + " Gbits/sec" /*+
+	" client cpu usage: " + fmt.Sprintf("%f", avgCPUC) + " and server CPU usage: " + fmt.Sprintf("%f", avgCPUS)*/
+}
+
+func parseVelServiceUdp(str string, clientset *kubernetes.Clientset, udp string) []float64 {
+	var velspeed []float64
+	velspeed = make([]float64, 3)
+	var errConv error
+	strs := strings.Split(str, "Client connecting")
+	for i := 0; i < 3; i++ {
+		vectString := strings.Split(strs[i+1], "0.0-10.0 ")
+		substring := strings.Split(vectString[1], "\n")
+		substring = strings.Split(substring[0], " ")
+		fmt.Println(substring[len(substring)-1])
+		fmt.Println(substring[len(substring)-2])
+		if strings.Contains(substring[len(substring)-2], " ") {
+			substring[len(substring)-2] = strings.Replace(substring[len(substring)-2], " ", "0", 4)
+		}
+		velspeed[i], errConv = strconv.ParseFloat(substring[len(substring)-2], 64)
+		if errConv != nil {
+			fmt.Println("errore alla riga 437 di iperfService")
+			panic(errConv)
+		}
+		switch substring[len(substring)-1] {
+		case "Mbits/sec":
+			velspeed[i] = velspeed[i] / 1000
+		case "Kbits/sec":
+			velspeed[i] = velspeed[i] / 1000000
+		case "Gbits/sec":
+			fmt.Println("Ok, Gbits/sec")
+		}
+
+	}
+	return velspeed
 }
 
 func TCPHairpinservice(clientset *kubernetes.Clientset, multiple bool) string {
