@@ -209,7 +209,7 @@ func NetperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 				panic("error panic in pod created by job")
 			}
 		}
-		if i < 5 && strings.Contains(str, "!!! WARNING") {
+		if i < 4 && strings.Contains(str, "!!! WARNING") {
 			utils.CleanCluster(clientset, namespace, "app=netperfserver", "app=netperfclient", deplName, jobName, pod.Name)
 			continue
 		}
@@ -396,7 +396,7 @@ func NetperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 			}
 		}
 
-		if i < 5 && strings.Contains(str, "!!! WARNING") {
+		if i < 4 && strings.Contains(str, "!!! WARNING") {
 			utils.CleanCluster(clientset, namespaceUDP, "app=netperfserver", "app=netperfclient", deplName, jobName, pod.Name)
 			continue
 		}
@@ -728,7 +728,7 @@ func calculateSpeed(str string, clientset *kubernetes.Clientset, ns string, add 
 			} else {
 				vectString := strings.Split(str, "\n")
 				if add == -1 {
-					strspeed := strings.Split(vectString[6+add], "   ")
+					strspeed := strings.Split(vectString[6], "   ")
 					if strings.Contains(strspeed[7], " ") {
 						strspeed[7] = strings.Replace(strspeed[7], " ", "0", 3)
 					}
