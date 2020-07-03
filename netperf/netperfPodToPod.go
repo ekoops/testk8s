@@ -214,6 +214,7 @@ func NetperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 			continue
 		}
 
+		fmt.Printf("misura trovata all'iterazione: %d\n", i)
 		i = 5
 		//netSpeeds, confidenceArray, cpuC, cpuS, confidenceArrayCpuC, confidenceArrayCpuS = calculateSpeed(str, clientset, namespace, 0)
 		netSpeeds, confidenceArray, cpuC, cpuS, confidenceArrayCpuC, confidenceArrayCpuS = calculateSpeed(str, clientset, namespace, 0)
@@ -399,6 +400,7 @@ func NetperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 			utils.CleanCluster(clientset, namespaceUDP, "app=netperfserver", "app=netperfclient", deplName, jobName, pod.Name)
 			continue
 		}
+		fmt.Printf("misura trovata all'iterazione: %d\n", i)
 		i = 5
 		//works on strings
 		netSpeeds, confidenceArray, cpuC, cpuS, confidenceArrayCpuC, confidenceArrayCpuS = calculateSpeed(str, clientset, namespaceUDP, -1)
@@ -753,7 +755,7 @@ func calculateSpeed(str string, clientset *kubernetes.Clientset, ns string, add 
 						panic(errConv)
 					}
 				} else {
-					strspeed := strings.Split(vectString[6], "  ")
+					strspeed := strings.Split(vectString[6+add], "  ")
 					fmt.Println(" ecco qui " + strspeed[7])
 					fmt.Println(" ecco qui " + strspeed[8])
 					fmt.Println(" ecco qui " + strspeed[10])
