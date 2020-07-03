@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -16,6 +17,8 @@ import (
 
 var stars = "*****************************************************************\n"
 var labels [2]map[string]string
+var nodeptr *apiv1.Node
+var nodevect [2]apiv1.Node
 
 func main() {
 	clientset := initialSetting()
@@ -31,7 +34,9 @@ func main() {
 		if _, master := nodes.Items[i].Labels["node-role.kubernetes.io/master"]; !master {
 			labels[count-1] = nodes.Items[i].GetLabels()
 			nodes.Items[i].Labels["type"] = "node" + fmt.Sprintf("%d", count)
-			_, errLabel = clientset.CoreV1().Nodes().Update(context.TODO(), &nodes.Items[i], metav1.UpdateOptions{})
+
+			nodeptr, errLabel = clientset.CoreV1().Nodes().Update(context.TODO(), &nodes.Items[i], metav1.UpdateOptions{})
+			nodevect[count-1] = *nodeptr
 			if errLabel != nil {
 				fmt.Println(errLabel)
 				return
@@ -48,6 +53,7 @@ func main() {
 		fmt.Println(err)
 		return
 	}
+
 	fmt.Println(time.Now())
 	fileoutput.WriteString(time.Now().String())
 	fmt.Println("-----------------------------------------------------------------")
@@ -169,8 +175,8 @@ func main() {
 		output = netperf.UDPservice(clientset, 2, false)
 		fmt.Printf("\n%s\navg speed of network Netperf UDP with service(same node) (1 service in the cluster): %s\n %s\n",stars, output,stars)
 		fileoutput.WriteString("\n"+stars+"\n"+"avg speed of network Netperf UDP with service (1 service in the cluster): "+output+"\n"+stars+"\n")
-
 	*/
+
 	fmt.Println(time.Now())
 	fileoutput.WriteString(time.Now().String())
 
@@ -230,7 +236,7 @@ func main() {
 			if _, nodeLab := nodes.Items[i].Labels["node-role.kubernetes.io/master"]; !nodeLab {
 				nodes.Items[i].SetLabels(labels[count-1])
 			}
-			_, errLabel = clientset.CoreV1().Nodes().Update(context.TODO(), &nodes.Items[i], metav1.UpdateOptions{})
+			_, errLabel = clientset.CoreV1().Nodes().Update(context.TODO(), &nodevect[count-1], metav1.UpdateOptions{})
 			if errLabel != nil {
 				fmt.Println(errLabel)
 				return
