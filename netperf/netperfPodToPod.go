@@ -728,13 +728,14 @@ func calculateSpeed(str string, clientset *kubernetes.Clientset, ns string, add 
 			} else {
 				vectString := strings.Split(str, "\n")
 				if add == -1 {
-					strspeed := strings.Split(vectString[6+add], "   ")
+
+					strspeed := strings.Split(vectString[5], "   ")
 					if strings.Contains(strspeed[7], " ") {
 						strspeed[7] = strings.Replace(strspeed[7], " ", "0", 3)
 					}
 					velspeed, errConv = strconv.ParseFloat(strspeed[7], 64)
 					if errConv != nil {
-						fmt.Println("ERRORE Warning: " + strspeed[7])
+						fmt.Println("ERRORE Warning linea 737: " + strspeed[7])
 						panic(errConv)
 					}
 					if strings.Contains(strspeed[8], " ") {
@@ -742,7 +743,7 @@ func calculateSpeed(str string, clientset *kubernetes.Clientset, ns string, add 
 					}
 					cpuC, errConv = strconv.ParseFloat(strspeed[8], 64)
 					if errConv != nil {
-						fmt.Println("ERRORE Warning: " + strspeed[8])
+						fmt.Println("ERRORE Warning 745: " + strspeed[8])
 						panic(errConv)
 					}
 					strspeed = strings.Split(vectString[7+add], "   ")
