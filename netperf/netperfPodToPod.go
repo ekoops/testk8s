@@ -678,9 +678,9 @@ func calculateSpeed(str string, clientset *kubernetes.Clientset, ns string, add 
 			if strings.Contains(strspeed[4], " ") {
 				strspeed[4] = strings.Replace(strspeed[4], " ", "0", 5)
 			}
-			cpuC, errConv = strconv.ParseFloat(strspeed[3], 64)
+			cpuC, errConv = strconv.ParseFloat(strspeed[4], 64)
 			if errConv != nil {
-				fmt.Println("ERRORE Warning: " + strspeed[3])
+				fmt.Println("ERRORE Warning: " + strspeed[4])
 				panic(errConv)
 			}
 			strspeed = strings.Split(vectString[15+add], "    ")
@@ -728,7 +728,7 @@ func calculateSpeed(str string, clientset *kubernetes.Clientset, ns string, add 
 			} else {
 				vectString := strings.Split(str, "\n")
 				if add == -1 {
-					strspeed := strings.Split(vectString[6], "   ")
+					strspeed := strings.Split(vectString[6+add], "   ")
 					if strings.Contains(strspeed[7], " ") {
 						strspeed[7] = strings.Replace(strspeed[7], " ", "0", 3)
 					}
