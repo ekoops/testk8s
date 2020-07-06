@@ -34,6 +34,7 @@ func main() {
 		if _, master := nodes.Items[i].Labels["node-role.kubernetes.io/master"]; !master {
 			labels[count-1] = nodes.Items[i].GetLabels()
 			nodes.Items[i].Labels["type"] = "node" + fmt.Sprintf("%d", count)
+			//fmt.Println("label added ")
 
 			nodeptr, errLabel = clientset.CoreV1().Nodes().Update(context.TODO(), &nodes.Items[i], metav1.UpdateOptions{})
 			nodevect[count-1] = *nodeptr
@@ -230,13 +231,15 @@ func main() {
 		return
 	}
 
+	nodes, errNodes = clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
 	count = 1
 	for i := 0; i < len(nodes.Items); i++ {
 		if _, master := nodes.Items[i].Labels["node-role.kubernetes.io/master"]; !master {
 			if _, nodeLab := nodes.Items[i].Labels["node-role.kubernetes.io/master"]; !nodeLab {
 				nodes.Items[i].SetLabels(labels[count-1])
+				delete(nodes.Items[i].Labels, "type")
 			}
-			_, errLabel = clientset.CoreV1().Nodes().Update(context.TODO(), &nodevect[count-1], metav1.UpdateOptions{})
+			_, errLabel = clientset.CoreV1().Nodes().Update(context.TODO(), &nodes.Items[i], metav1.UpdateOptions{})
 			if errLabel != nil {
 				fmt.Println(errLabel)
 				return
