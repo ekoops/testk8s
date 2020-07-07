@@ -46,7 +46,7 @@ func NetperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 	node = utils.SetNodeSelector(casus)
 	nsCR := utils.CreateNS(clientset, namespace)
 	fmt.Printf("Namespace %s created\n", nsCR.Name)
-
+	best := "10000.0"
 	//create one deployment of netperf server
 	/*
 		netSpeeds := make([]float64, iteration)
@@ -210,14 +210,17 @@ func NetperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 			}
 		}
 		if i < 4 && strings.Contains(str, "!!! WARNING") {
+			best = bestMeasure(str, best)
 			utils.CleanCluster(clientset, namespace, "app=netperfserver", "app=netperfclient", deplName, jobName, pod.Name)
 			continue
+		} else {
+			best = str
 		}
 
 		fmt.Printf("misura trovata all'iterazione: %d\n", i)
 		i = 5
 		//netSpeeds, confidenceArray, cpuC, cpuS, confidenceArrayCpuC, confidenceArrayCpuS = calculateSpeed(str, clientset, namespace, 0)
-		netSpeeds, confidenceArray, cpuC, cpuS, confidenceArrayCpuC, confidenceArrayCpuS = calculateSpeed(str, clientset, namespace, 0)
+		netSpeeds, confidenceArray, cpuC, cpuS, confidenceArrayCpuC, confidenceArrayCpuS = calculateSpeed(best, clientset, namespace, 0)
 
 		//todo vedere cosa succede con float 32, per ora 64
 
@@ -232,6 +235,7 @@ func NetperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 func NetperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 
 	node = utils.SetNodeSelector(casus)
+	best := "10000.0"
 	nsCR := utils.CreateNS(clientset, namespaceUDP)
 	fmt.Printf("Namespace UDP %s created\n", nsCR.Name)
 	/*
@@ -397,13 +401,16 @@ func NetperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 		}
 
 		if i < 4 && strings.Contains(str, "!!! WARNING") {
+			best = bestMeasure(str, best)
 			utils.CleanCluster(clientset, namespaceUDP, "app=netperfserver", "app=netperfclient", deplName, jobName, pod.Name)
 			continue
+		} else {
+			best = str
 		}
 		fmt.Printf("misura trovata all'iterazione: %d\n", i)
 		i = 5
 		//works on strings
-		netSpeeds, confidenceArray, cpuC, cpuS, confidenceArrayCpuC, confidenceArrayCpuS = calculateSpeed(str, clientset, namespaceUDP, -1)
+		netSpeeds, confidenceArray, cpuC, cpuS, confidenceArrayCpuC, confidenceArrayCpuS = calculateSpeed(best, clientset, namespaceUDP, -1)
 		//todo vedere cosa succede con float 32, per ora 64
 		utils.CleanCluster(clientset, namespaceUDP, "app=netperfserver", "app=netperfclient", deplName, jobName, pod.Name)
 	}
@@ -412,6 +419,45 @@ func NetperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 	return fmt.Sprintf("%f", avgSp) + " Gbits/sec, confidence avg" + fmt.Sprintf("%f", confidenceAVG(netSpeeds, confidenceArray, float64(iteration))) + " and cpu client/server usage : " + fmt.Sprintf("%f", avgClient) + ":" + fmt.Sprintf("%f", CpuPercCl) + " / " + fmt.Sprintf("%f", avgServer) + ":" + fmt.Sprintf("%f", CpuPercS)
 	*/
 	return fmt.Sprintf("%f", netSpeeds) + " Gbits/sec, confidence avg: " + fmt.Sprintf("%f", confidenceArray) + " and cpu client usage : " + fmt.Sprintf("%f", cpuC) + "error: " + fmt.Sprintf("%f", confidenceArrayCpuC) + "/server: " + fmt.Sprintf("%f", cpuS) + ":" + fmt.Sprintf("%f", confidenceArrayCpuS)
+}
+
+func bestMeasure(str string, best string) string {
+	var minTotal float64
+	var minMeasure float64
+	var errConv error
+
+	if best == "10000.0" {
+		minTotal, errConv = strconv.ParseFloat(best, 64)
+		if errConv != nil {
+			fmt.Println("errore di conversione linea 427")
+			panic(errConv)
+		}
+	} else {
+		s := strings.Split(best, "Throughput")
+		selected := strings.Split(s[1], "%")[0]
+		throughput := strings.Replace(selected, " ", "0", 10)
+		throughput = strings.Replace(throughput, ":", "0", 1)
+		minTotal, errConv = strconv.ParseFloat(throughput, 64)
+		if errConv != nil {
+			fmt.Println("errore di conversione linea 440")
+			panic(errConv)
+		}
+	}
+
+	s := strings.Split(str, "Throughput")
+	selected := strings.Split(s[1], "%")[0]
+	throughput := strings.Replace(selected, " ", "0", 10)
+	throughput = strings.Replace(throughput, ":", "0", 1)
+	minMeasure, errConv = strconv.ParseFloat(throughput, 64)
+	if errConv != nil {
+		fmt.Println("errore di conversione linea 440")
+		panic(errConv)
+	}
+	if minMeasure < minTotal {
+		best = str
+	}
+
+	return best
 }
 
 func confidenceAVG(speeds []float64, conf []float64, div float64) float64 {
