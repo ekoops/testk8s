@@ -20,7 +20,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="810481c3-0236-4391-aeb1-7151369e7d97" name="Default Changelist" comment="ok all tests presents">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/netperf/netperfPodToPod.go" beforeDir="false" afterPath="$PROJECT_DIR$/netperf/netperfPodToPod.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/netperf/netperfService.go" beforeDir="false" afterPath="$PROJECT_DIR$/netperf/netperfService.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -137,7 +138,8 @@
     <MESSAGE value="added some things fixed bugs" />
     <MESSAGE value="rewritten some tests and added cni yaml" />
     <MESSAGE value="ok all tests presents" />
-    <option name="LAST_COMMIT_MESSAGE" value="ok all tests presents" />
+    <MESSAGE value="Added Selection best measure throuhput in Netperf tests" />
+    <option name="LAST_COMMIT_MESSAGE" value="Added Selection best measure throuhput in Netperf tests" />
   </component>
   <component name="VgoProject">
     <integration-enabled>true</integration-enabled>
@@ -163,66 +165,66 @@
       <screen x="45" y="27" width="1321" height="741" />
     </state>
     <state x="367" y="27" width="666" height="741" key="#go_build_testk8s/45.27.1321.741@45.27.1321.741" timestamp="1593267253153" />
-    <state width="651" height="506" key="DebuggerActiveHint" timestamp="1593788488811">
+    <state width="651" height="506" key="DebuggerActiveHint" timestamp="1594047470767">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
-    <state width="651" height="506" key="DebuggerActiveHint/45.27.1321.741@45.27.1321.741" timestamp="1593788488811" />
+    <state width="651" height="506" key="DebuggerActiveHint/45.27.1321.741@45.27.1321.741" timestamp="1594047470767" />
     <state x="488" y="154" width="424" height="484" key="FileChooserDialogImpl" timestamp="1592218313571">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
     <state x="488" y="154" width="424" height="484" key="FileChooserDialogImpl/45.27.1321.741@45.27.1321.741" timestamp="1592218313571" />
-    <state width="1275" height="219" key="GridCell.Tab.0.bottom" timestamp="1593788609008">
+    <state width="1275" height="219" key="GridCell.Tab.0.bottom" timestamp="1594117188576">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
-    <state width="1275" height="219" key="GridCell.Tab.0.bottom/45.27.1321.741@45.27.1321.741" timestamp="1593788609008" />
-    <state width="1275" height="219" key="GridCell.Tab.0.center" timestamp="1593788609007">
+    <state width="1275" height="219" key="GridCell.Tab.0.bottom/45.27.1321.741@45.27.1321.741" timestamp="1594117188576" />
+    <state width="1275" height="219" key="GridCell.Tab.0.center" timestamp="1594117188574">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
-    <state width="1275" height="219" key="GridCell.Tab.0.center/45.27.1321.741@45.27.1321.741" timestamp="1593788609007" />
-    <state width="1275" height="219" key="GridCell.Tab.0.left" timestamp="1593788609007">
+    <state width="1275" height="219" key="GridCell.Tab.0.center/45.27.1321.741@45.27.1321.741" timestamp="1594117188574" />
+    <state width="1275" height="219" key="GridCell.Tab.0.left" timestamp="1594117188574">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
-    <state width="1275" height="219" key="GridCell.Tab.0.left/45.27.1321.741@45.27.1321.741" timestamp="1593788609007" />
-    <state width="1275" height="219" key="GridCell.Tab.0.right" timestamp="1593788609008">
+    <state width="1275" height="219" key="GridCell.Tab.0.left/45.27.1321.741@45.27.1321.741" timestamp="1594117188574" />
+    <state width="1275" height="219" key="GridCell.Tab.0.right" timestamp="1594117188575">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
-    <state width="1275" height="219" key="GridCell.Tab.0.right/45.27.1321.741@45.27.1321.741" timestamp="1593788609008" />
-    <state width="1275" height="219" key="GridCell.Tab.1.bottom" timestamp="1593788522565">
+    <state width="1275" height="219" key="GridCell.Tab.0.right/45.27.1321.741@45.27.1321.741" timestamp="1594117188575" />
+    <state width="1275" height="219" key="GridCell.Tab.1.bottom" timestamp="1594129299414">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
-    <state width="1275" height="219" key="GridCell.Tab.1.bottom/45.27.1321.741@45.27.1321.741" timestamp="1593788522565" />
-    <state width="1275" height="219" key="GridCell.Tab.1.center" timestamp="1593788522564">
+    <state width="1275" height="219" key="GridCell.Tab.1.bottom/45.27.1321.741@45.27.1321.741" timestamp="1594129299414" />
+    <state width="1275" height="219" key="GridCell.Tab.1.center" timestamp="1594129299412">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
-    <state width="1275" height="219" key="GridCell.Tab.1.center/45.27.1321.741@45.27.1321.741" timestamp="1593788522564" />
-    <state width="1275" height="219" key="GridCell.Tab.1.left" timestamp="1593788522564">
+    <state width="1275" height="219" key="GridCell.Tab.1.center/45.27.1321.741@45.27.1321.741" timestamp="1594129299412" />
+    <state width="1275" height="219" key="GridCell.Tab.1.left" timestamp="1594129299412">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
-    <state width="1275" height="219" key="GridCell.Tab.1.left/45.27.1321.741@45.27.1321.741" timestamp="1593788522564" />
-    <state width="1275" height="219" key="GridCell.Tab.1.right" timestamp="1593788522565">
+    <state width="1275" height="219" key="GridCell.Tab.1.left/45.27.1321.741@45.27.1321.741" timestamp="1594129299412" />
+    <state width="1275" height="219" key="GridCell.Tab.1.right" timestamp="1594129299413">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
-    <state width="1275" height="219" key="GridCell.Tab.1.right/45.27.1321.741@45.27.1321.741" timestamp="1593788522565" />
+    <state width="1275" height="219" key="GridCell.Tab.1.right/45.27.1321.741@45.27.1321.741" timestamp="1594129299413" />
     <state x="172" y="85" width="1056" height="622" key="MergeDialog" timestamp="1592896387168">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
     <state x="172" y="85" width="1056" height="622" key="MergeDialog/45.27.1321.741@45.27.1321.741" timestamp="1592896387168" />
-    <state x="300" y="118" width="800" height="556" key="Vcs.Push.Dialog.v2" timestamp="1593763166422">
+    <state x="300" y="118" width="800" height="556" key="Vcs.Push.Dialog.v2" timestamp="1594129870813">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
-    <state x="300" y="118" width="800" height="556" key="Vcs.Push.Dialog.v2/45.27.1321.741@45.27.1321.741" timestamp="1593763166422" />
-    <state width="670" height="371" key="XDebugger.FullValuePopup" timestamp="1594022046094">
+    <state x="300" y="118" width="800" height="556" key="Vcs.Push.Dialog.v2/45.27.1321.741@45.27.1321.741" timestamp="1594129870813" />
+    <state width="670" height="371" key="XDebugger.FullValuePopup" timestamp="1594117184071">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
-    <state width="670" height="371" key="XDebugger.FullValuePopup/45.27.1321.741@45.27.1321.741" timestamp="1594022046094" />
+    <state width="670" height="371" key="XDebugger.FullValuePopup/45.27.1321.741@45.27.1321.741" timestamp="1594117184071" />
     <state x="315" y="27" width="770" height="741" key="com.intellij.openapi.editor.actions.MultiplePasteAction$ClipboardContentChooser" timestamp="1592986155203">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
     <state x="315" y="27" width="770" height="741" key="com.intellij.openapi.editor.actions.MultiplePasteAction$ClipboardContentChooser/45.27.1321.741@45.27.1321.741" timestamp="1592986155203" />
-    <state x="477" y="311" width="457" height="170" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2" timestamp="1593453387454">
+    <state x="477" y="311" width="447" height="170" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2" timestamp="1594105882913">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
-    <state x="477" y="311" width="457" height="170" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2/45.27.1321.741@45.27.1321.741" timestamp="1593453387454" />
+    <state x="477" y="311" width="447" height="170" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2/45.27.1321.741@45.27.1321.741" timestamp="1594105882913" />
     <state x="0" y="27" width="620" height="741" key="find.popup" timestamp="1593510402465">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
@@ -237,12 +239,12 @@
       <breakpoints>
         <line-breakpoint enabled="true" type="DlvLineBreakpoint">
           <url>file://$PROJECT_DIR$/netperf/netperfService.go</url>
-          <line>389</line>
+          <line>394</line>
           <option name="timeStamp" value="20" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="DlvLineBreakpoint">
           <url>file://$PROJECT_DIR$/netperf/netperfService.go</url>
-          <line>511</line>
+          <line>517</line>
           <option name="timeStamp" value="22" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="DlvLineBreakpoint">
@@ -266,24 +268,34 @@
           <option name="timeStamp" value="36" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="DlvLineBreakpoint">
-          <url>file://$PROJECT_DIR$/netperf/netperfService.go</url>
-          <line>500</line>
-          <option name="timeStamp" value="40" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
           <url>file://$PROJECT_DIR$/netperf/netperfPodToPod.go</url>
-          <line>729</line>
+          <line>776</line>
           <option name="timeStamp" value="46" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="DlvLineBreakpoint">
           <url>file://$PROJECT_DIR$/netperf/netperfPodToPod.go</url>
-          <line>387</line>
+          <line>391</line>
           <option name="timeStamp" value="47" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="DlvLineBreakpoint">
           <url>file://$PROJECT_DIR$/launchTests.go</url>
-          <line>32</line>
-          <option name="timeStamp" value="43" />
+          <line>231</line>
+          <option name="timeStamp" value="48" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
+          <url>file://$PROJECT_DIR$/netperf/netperfService.go</url>
+          <line>177</line>
+          <option name="timeStamp" value="49" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
+          <url>file://$PROJECT_DIR$/netperf/netperfPodToPod.go</url>
+          <line>205</line>
+          <option name="timeStamp" value="50" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
+          <url>file://$PROJECT_DIR$/netperf/netperfPodToPod.go</url>
+          <line>424</line>
+          <option name="timeStamp" value="51" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
