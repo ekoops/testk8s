@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/pointer"
+	"os"
 	"strconv"
 	"strings"
 	"testk8s/utils"
@@ -32,7 +33,7 @@ var cpuconfC []float64
 var cpuClie []float64
 var cpuconfS []float64
 
-func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
+func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *os.File) string {
 
 	node = utils.SetNodeSelector(casus)
 	nsSpec := utils.CreateNS(clientset, namespace)
@@ -112,7 +113,7 @@ func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 			fmt.Printf("Server IP: %s\n", podIP)
 
 		}
-		command := "for i in 0 1 2; do sleep 5; iperf3 -c " + podI.Status.PodIP + " -p 5002 -V -N -t 10 -Z -A 1,2 >> file.txt; done; cat file.txt"
+		command := "for i in 0 1 2; do iperf3 -c " + podI.Status.PodIP + " -p 5002 -V -N -t 10 -Z -A 1,2 >> file.txt; sleep 11; done; cat file.txt"
 		fmt.Println("Creating Iperf Client: " + command)
 		jobsClient := clientset.BatchV1().Jobs(namespace)
 		job := &batchv1.Job{
@@ -189,6 +190,7 @@ func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 						panic(errBuf)
 					}
 					str = buf.String()
+					fileoutput.WriteString(str)
 					ctl = 1
 					break
 				}
@@ -226,7 +228,7 @@ func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 
 }
 
-func IperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
+func IperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *os.File) string {
 
 	node = utils.SetNodeSelector(casus)
 	utils.CreateNS(clientset, namespaceUDP)
@@ -309,7 +311,7 @@ func IperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 
 		}
 
-		command := "for i in 0 1 2; do iperf3 -c " + podI.Status.PodIP + " -u -b 0 -p 5003 -V -N -t 10 -Z >> file.txt; done; cat file.txt"
+		command := "for i in 0 1 2; do iperf3 -c " + podI.Status.PodIP + " -u -b 0 -p 5003 -V -N -t 10 -Z >> file.txt; sleep 11; done; cat file.txt"
 		fmt.Println("Creating UDP Iperf Client: " + command)
 		jobsClient := clientset.BatchV1().Jobs(namespaceUDP)
 		job := &batchv1.Job{
@@ -386,6 +388,7 @@ func IperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 						panic(errBuf)
 					}
 					str = buf.String()
+					fileoutput.WriteString(str)
 					fmt.Println(str)
 					ctl = 1
 					break

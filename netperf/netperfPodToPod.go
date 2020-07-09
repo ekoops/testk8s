@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/pointer"
+	"os"
 	"strconv"
 	"strings"
 	utils "testk8s/utils"
@@ -41,7 +42,7 @@ var confidenceArrayCpuS float64
 var cpuC float64
 var cpuS float64
 
-func NetperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
+func NetperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *os.File) string {
 
 	node = utils.SetNodeSelector(casus)
 	nsCR := utils.CreateNS(clientset, namespace)
@@ -202,6 +203,7 @@ func NetperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 					str = buf.String()
 					//TODO da mettere su file invece che stampare
 					fmt.Println(str)
+					fileoutput.WriteString(str)
 					ctl = 1
 					break
 				}
@@ -232,7 +234,7 @@ func NetperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 	return fmt.Sprintf("%f", netSpeeds) + " Gbits/sec, confidence avg: " + fmt.Sprintf("%f", confidenceArray) + " and cpu client usage : " + fmt.Sprintf("%f", cpuC) + "error: " + fmt.Sprintf("%f", confidenceArrayCpuC) + "/server: " + fmt.Sprintf("%f", cpuS) + ":" + fmt.Sprintf("%f", confidenceArrayCpuS)
 }
 
-func NetperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
+func NetperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *os.File) string {
 
 	node = utils.SetNodeSelector(casus)
 	best := "10000.0"
@@ -390,6 +392,7 @@ func NetperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int) string {
 						panic(errBuf)
 					}
 					str = buf.String()
+					fileoutput.WriteString(str)
 					//TODO stampare su file
 					fmt.Println(str)
 					ctl = 1
@@ -711,7 +714,7 @@ func calculateSpeed(str string, clientset *kubernetes.Clientset, ns string, add 
 	} else {
 		if strings.Contains(str, "!!! WARNING") && add == -1 {
 			vectString := strings.Split(str, "\n")
-			conf, confCpuC, confCpuS = warnings(vectString)
+			conf, confCpuC, confCpuS = warnings(vectString, 0)
 			strspeed := strings.Split(vectString[14+add], "    ")
 			if strings.Contains(strspeed[3], " ") {
 				strspeed[3] = strings.Replace(strspeed[3], " ", "0", 5)
@@ -741,8 +744,8 @@ func calculateSpeed(str string, clientset *kubernetes.Clientset, ns string, add 
 		} else {
 			if strings.Contains(str, "!!! WARNING") {
 				vectString := strings.Split(str, "\n")
-				conf, confCpuC, confCpuS = warnings(vectString)
-				strspeed := strings.Split(vectString[14], "    ")
+				conf, confCpuC, confCpuS = warnings(vectString, add)
+				strspeed := strings.Split(vectString[14+add], "    ")
 				strspeeds := strings.Split(strspeed[2], "  ")
 				if strings.Contains(strspeeds[1], " ") {
 					strspeeds[1] = strings.Replace(strspeeds[1], " ", "0", 5)
@@ -856,8 +859,8 @@ func calculateSpeed(str string, clientset *kubernetes.Clientset, ns string, add 
 	return velspeed, conf, cpuC, cpuS, confCpuC, confCpuS
 }
 
-func warnings(vectString []string) (float64, float64, float64) {
-	throughput := strings.Split(vectString[5], ":")
+func warnings(vectString []string, add int) (float64, float64, float64) {
+	throughput := strings.Split(vectString[5+add], ":")
 	throughput[len(throughput)-1] = strings.Replace(throughput[len(throughput)-1], "%", "0", 1)
 	throughput[len(throughput)-1] = strings.Replace(throughput[len(throughput)-1], " ", "0", 3)
 	fmt.Printf("%s\n", throughput[len(throughput)-1])
@@ -866,7 +869,7 @@ func warnings(vectString []string) (float64, float64, float64) {
 		fmt.Printf("ERRORE Warning: %f\n ", ret1)
 		panic(ret1)
 	}
-	errCpuC := strings.Split(vectString[6], ":")
+	errCpuC := strings.Split(vectString[6+add], ":")
 	errCpuC[len(errCpuC)-1] = strings.Replace(errCpuC[len(errCpuC)-1], "%", "0", 1)
 	errCpuC[len(errCpuC)-1] = strings.Replace(errCpuC[len(errCpuC)-1], " ", "0", 3)
 	ret2, err2 := strconv.ParseFloat(errCpuC[len(errCpuC)-1], 64)
@@ -874,7 +877,7 @@ func warnings(vectString []string) (float64, float64, float64) {
 		fmt.Printf("ERRORE Warning: %f\n ", ret2)
 		panic(ret2)
 	}
-	errCpuS := strings.Split(vectString[7], ":")
+	errCpuS := strings.Split(vectString[7+add], ":")
 	errCpuS[len(errCpuS)-1] = strings.Replace(errCpuS[len(errCpuS)-1], "%", "0", 1)
 	errCpuS[len(errCpuS)-1] = strings.Replace(errCpuS[len(errCpuS)-1], " ", "0", 3)
 	ret3, err3 := strconv.ParseFloat(errCpuS[len(errCpuS)-1], 64)
