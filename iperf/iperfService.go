@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/pointer"
+	"os"
 	"strconv"
 	"strings"
 	"testk8s/utils"
@@ -21,7 +22,7 @@ var nameService = "my-service-iperf"
 var namespaceUDP = "testiperfudp"
 var imageServiceUDP = "leannet/k8s-netperf:latest"
 
-func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool) string {
+func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool, fileoutput *os.File) string {
 
 	node = utils.SetNodeSelector(casus)
 	nsCR := utils.CreateNS(clientset, namespace)
@@ -107,7 +108,7 @@ func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 			fmt.Printf("Service IP: %s\n", svcIP)
 		}
 
-		command := "for i in 0 1 2; do iperf3 -c " + serviceC.Spec.ClusterIP + " -p 5001 -V -N -t 10 -Z >> file.txt; done;cat file.txt"
+		command := "for i in 0 1 2; do iperf3 -c " + serviceC.Spec.ClusterIP + " -p 5001 -V -N -t 10 -Z >> file.txt; sleep 11; done;cat file.txt"
 		fmt.Println("Creating Iperf Client: " + command)
 		jobsClient := clientset.BatchV1().Jobs(namespace)
 		job := &batchv1.Job{
@@ -184,6 +185,7 @@ func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 						panic(errBuf)
 					}
 					str = buf.String()
+					fileoutput.WriteString(str)
 					ctl = 1
 					break
 				}
@@ -223,7 +225,7 @@ func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 
 }
 
-func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool) string {
+func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool, fileoutput *os.File) string {
 
 	node = utils.SetNodeSelector(casus)
 	nsCR := utils.CreateNS(clientset, namespaceUDP)
@@ -326,7 +328,7 @@ func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 			fmt.Printf("Service IP: %s\n", svcIP)
 		}
 
-		command := "for i in 0 1 2; do iperf -c " + serviceC.Spec.ClusterIP + " -u -b 10000G -p 5003 -V -i 1 -t 10 >> file.txt;done; cat file.txt"
+		command := "for i in 0 1 2; do iperf -c " + serviceC.Spec.ClusterIP + " -u -b 10000G -p 5003 -V -i 1 -t 10 >> file.txt; sleep 11 ;done; cat file.txt"
 		fmt.Println("Creating UDP Iperf Client: " + command)
 		jobsClient := clientset.BatchV1().Jobs(namespaceUDP)
 		job := &batchv1.Job{
@@ -404,6 +406,7 @@ func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 					}
 					str = buf.String()
 					fmt.Println(str)
+					fileoutput.WriteString(str)
 					ctl = 1
 					break
 				}

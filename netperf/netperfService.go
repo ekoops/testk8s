@@ -12,11 +12,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/pointer"
+	"os"
 	"strings"
 	"testk8s/utils"
 )
 
-func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool) string {
+func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool, fileoutput *os.File) string {
 
 	node = utils.SetNodeSelector(casus)
 	svcCr := initializeTCPService(multiple, clientset, namespace, "netperfserver")
@@ -174,6 +175,7 @@ func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 					}
 					str = buf.String()
 					fmt.Println(str)
+					fileoutput.WriteString(str)
 					ctl = 1
 					break
 				}
@@ -411,7 +413,7 @@ func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 	return fmt.Sprintf("%f", avgSp) + " Gbits/sec, confidence avg" + fmt.Sprintf("%f", confidenceAVG(netSpeeds, confidenceArray, float64(iteration))) + " and cpu client/server usage : " + fmt.Sprintf("%f", avgClient) + "error: " + fmt.Sprintf("%f", CpuPercCl) + "/" + fmt.Sprintf("%f", avgServer) + ":" + fmt.Sprintf("%f", CpuPercS)
 }*/
 
-func TCPHairpinservice(clientset *kubernetes.Clientset, multiple bool) string {
+func TCPHairpinservice(clientset *kubernetes.Clientset, multiple bool, fileoutput *os.File) string {
 
 	svcCr := initializeTCPService(multiple, clientset, namespace, "netperfhairpin")
 	var podName string
@@ -516,6 +518,7 @@ func TCPHairpinservice(clientset *kubernetes.Clientset, multiple bool) string {
 					}
 					str = buf.String()
 					fmt.Println(str)
+					fileoutput.WriteString(str)
 					ctl = 1
 					break
 				}
