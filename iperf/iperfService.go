@@ -108,7 +108,7 @@ func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool, fileo
 			fmt.Printf("Service IP: %s\n", svcIP)
 		}
 
-		command := "for i in 0 1 2; do iperf3 -c " + serviceC.Spec.ClusterIP + " -p 5001 -V -N -t 10 -Z >> file.txt; sleep 11; done;cat file.txt"
+		command := "for i in 0 1 2; do iperf3 -c " + serviceC.Spec.ClusterIP + " -p 5001 -V -N -t 10 -Z -M 1448 >> file.txt; sleep 11; done;cat file.txt"
 		fmt.Println("Creating Iperf Client: " + command)
 		jobsClient := clientset.BatchV1().Jobs(namespace)
 		job := &batchv1.Job{
