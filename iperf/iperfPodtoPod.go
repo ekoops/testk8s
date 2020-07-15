@@ -113,7 +113,7 @@ func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *os
 			fmt.Printf("Server IP: %s\n", podIP)
 
 		}
-		command := "for i in 0 1 2; do iperf3 -c " + podI.Status.PodIP + " -p 5002 -V -N -t 10 -Z -A 1,2 >> file.txt; sleep 11; done; cat file.txt"
+		command := "for i in 0 1 2; do iperf3 -c " + podI.Status.PodIP + " -p 5002 -V -N -t 10 -Z -A 1,2 -M 1448 >> file.txt; sleep 11; done; cat file.txt"
 		fmt.Println("Creating Iperf Client: " + command)
 		jobsClient := clientset.BatchV1().Jobs(namespace)
 		job := &batchv1.Job{
@@ -311,7 +311,7 @@ func IperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *os
 
 		}
 
-		command := "for i in 0 1 2; do iperf3 -c " + podI.Status.PodIP + " -u -b 0 -p 5003 -V -N -t 10 -Z >> file.txt; sleep 11; done; cat file.txt"
+		command := "for i in 0 1 2; do iperf3 -c " + podI.Status.PodIP + " -u -b 0 -p 5003 -V -N -t 10 -Z -M 1448 >> file.txt; sleep 11; done; cat file.txt"
 		fmt.Println("Creating UDP Iperf Client: " + command)
 		jobsClient := clientset.BatchV1().Jobs(namespaceUDP)
 		job := &batchv1.Job{
