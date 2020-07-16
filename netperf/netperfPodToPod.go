@@ -211,7 +211,7 @@ func NetperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *
 				panic("error panic in pod created by job")
 			}
 		}
-		if i < 4 && strings.Contains(str, "!!! WARNING") {
+		if i <= 4 && strings.Contains(str, "!!! WARNING") {
 			best = bestMeasure(str, best)
 			utils.CleanCluster(clientset, namespace, "app=netperfserver", "app=netperfclient", deplName, jobName, pod.Name)
 			continue
@@ -403,7 +403,7 @@ func NetperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *
 			}
 		}
 
-		if i < 4 && strings.Contains(str, "!!! WARNING") {
+		if i <= 4 && strings.Contains(str, "!!! WARNING") {
 			best = bestMeasure(str, best)
 			utils.CleanCluster(clientset, namespaceUDP, "app=netperfserver", "app=netperfclient", deplName, jobName, pod.Name)
 			continue
