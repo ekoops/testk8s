@@ -184,7 +184,7 @@ func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool, fileo
 			}
 		}
 
-		if i < 4 && strings.Contains(str, "!!! WARNING") {
+		if i <= 4 && strings.Contains(str, "!!! WARNING") {
 			best = bestMeasure(str, best)
 			utils.CleanCluster(clientset, namespace, "app=netperfserver", "app=netperfclient", deplName, jobName, pod.Name)
 			continue
@@ -526,7 +526,7 @@ func TCPHairpinservice(clientset *kubernetes.Clientset, multiple bool, fileoutpu
 				panic("error panic in pod created by job")
 			}
 		}
-		if i < 4 && strings.Contains(str, "!!! WARNING") {
+		if i <= 4 && strings.Contains(str, "!!! WARNING") {
 			best = bestMeasure(str, best)
 			errJobDel := clientset.BatchV1().Jobs(namespace).Delete(context.TODO(), nameJob, metav1.DeleteOptions{})
 			if errJobDel != nil {
