@@ -187,7 +187,9 @@ func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool, fileo
 		if i <= 4 && strings.Contains(str, "!!! WARNING") {
 			best = bestMeasure(str, best)
 			utils.CleanCluster(clientset, namespace, "app=netperfserver", "app=netperfclient", deplName, jobName, pod.Name)
-			continue
+			if i < 4 {
+				continue
+			}
 		} else {
 			best = str
 		}
@@ -195,12 +197,12 @@ func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool, fileo
 		fmt.Printf("misura trovata all'iterazione: %d\n", i)
 		i = 5
 		//netSpeeds, confidenceArray, cpuC, cpuS, confidenceArrayCpuC, confidenceArrayCpuS = calculateSpeed(str, clientset, namespace, 0)
-		netSpeeds, confidenceArray, cpuC, cpuS, confidenceArrayCpuC, confidenceArrayCpuS = calculateSpeed(best, clientset, namespace, 0)
 
 		//todo vedere cosa succede con float 32, per ora 64
 
 		utils.CleanCluster(clientset, namespace, "app=netperfserver", "app=netperfclient", deplName, jobName, pod.Name)
 	}
+	netSpeeds, confidenceArray, cpuC, cpuS, confidenceArrayCpuC, confidenceArrayCpuS = calculateSpeed(best, clientset, namespace, 0)
 	utils.DeleteBulk(10, clientset, namespace)
 	utils.DeleteNS(clientset, namespace)
 	fmt.Printf("Test Namespace: %s deleted\n", namespace)
@@ -558,7 +560,9 @@ func TCPHairpinservice(clientset *kubernetes.Clientset, multiple bool, fileoutpu
 					panic(errWaitPodDel)
 				}
 			}
-			continue
+			if i < 4 {
+				continue
+			}
 		} else {
 			best = str
 		}
@@ -567,8 +571,8 @@ func TCPHairpinservice(clientset *kubernetes.Clientset, multiple bool, fileoutpu
 		i = 5
 
 		//works on strings
-		netSpeeds, confidenceArray, cpuC, cpuS, confidenceArrayCpuC, confidenceArrayCpuS = calculateSpeed(best, clientset, namespace, 1)
 	}
+	netSpeeds, confidenceArray, cpuC, cpuS, confidenceArrayCpuC, confidenceArrayCpuS = calculateSpeed(best, clientset, namespace, 1)
 	errJobDel := clientset.BatchV1().Jobs(namespace).Delete(context.TODO(), jobName, metav1.DeleteOptions{})
 	if errJobDel != nil {
 		panic(errJobDel)
