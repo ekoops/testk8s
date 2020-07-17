@@ -213,8 +213,8 @@ func NetperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *
 		}
 		if i <= 4 && strings.Contains(str, "!!! WARNING") {
 			best = bestMeasure(str, best)
-			utils.CleanCluster(clientset, namespace, "app=netperfserver", "app=netperfclient", deplName, jobName, pod.Name)
 			if i < 4 {
+				utils.CleanCluster(clientset, namespace, "app=netperfserver", "app=netperfclient", deplName, jobName, pod.Name)
 				continue
 			}
 		} else {
@@ -407,8 +407,8 @@ func NetperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *
 
 		if i <= 4 && strings.Contains(str, "!!! WARNING") {
 			best = bestMeasure(str, best)
-			utils.CleanCluster(clientset, namespaceUDP, "app=netperfserver", "app=netperfclient", deplName, jobName, pod.Name)
 			if i < 4 {
+				utils.CleanCluster(clientset, namespaceUDP, "app=netperfserver", "app=netperfclient", deplName, jobName, pod.Name)
 				continue
 			}
 		} else {
