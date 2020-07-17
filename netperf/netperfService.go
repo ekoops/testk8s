@@ -186,8 +186,8 @@ func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool, fileo
 
 		if i <= 4 && strings.Contains(str, "!!! WARNING") {
 			best = bestMeasure(str, best)
-			utils.CleanCluster(clientset, namespace, "app=netperfserver", "app=netperfclient", deplName, jobName, pod.Name)
 			if i < 4 {
+				utils.CleanCluster(clientset, namespace, "app=netperfserver", "app=netperfclient", deplName, jobName, pod.Name)
 				continue
 			}
 		} else {
@@ -530,37 +530,38 @@ func TCPHairpinservice(clientset *kubernetes.Clientset, multiple bool, fileoutpu
 		}
 		if i <= 4 && strings.Contains(str, "!!! WARNING") {
 			best = bestMeasure(str, best)
-			errJobDel := clientset.BatchV1().Jobs(namespace).Delete(context.TODO(), nameJob, metav1.DeleteOptions{})
-			if errJobDel != nil {
-				panic(errJobDel)
-			}
-			JobSize, errWaitJobDel := clientset.BatchV1().Jobs(namespace).List(context.TODO(), metav1.ListOptions{})
-			if errWaitJobDel != nil {
-				panic(errWaitJobDel)
-			}
-			for len(JobSize.Items) != 0 {
-				JobSize, errWaitJobDel = clientset.BatchV1().Jobs(namespace).List(context.TODO(), metav1.ListOptions{})
+			if i < 4 {
+				errJobDel := clientset.BatchV1().Jobs(namespace).Delete(context.TODO(), nameJob, metav1.DeleteOptions{})
+				if errJobDel != nil {
+					panic(errJobDel)
+				}
+				JobSize, errWaitJobDel := clientset.BatchV1().Jobs(namespace).List(context.TODO(), metav1.ListOptions{})
 				if errWaitJobDel != nil {
 					panic(errWaitJobDel)
 				}
-			}
+				for len(JobSize.Items) != 0 {
+					JobSize, errWaitJobDel = clientset.BatchV1().Jobs(namespace).List(context.TODO(), metav1.ListOptions{})
+					if errWaitJobDel != nil {
+						panic(errWaitJobDel)
+					}
+				}
 
-			//Pod delete
-			errPodDel := clientset.CoreV1().Pods(namespace).Delete(context.TODO(), pod.GetName(), metav1.DeleteOptions{})
-			if errPodDel != nil {
-				panic(errPodDel)
-			}
-			PodSize, errWaitPodDel := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "netperfhairpin"})
-			if errWaitPodDel != nil {
-				panic(errWaitPodDel)
-			}
-			for len(PodSize.Items) != 0 {
-				PodSize, errWaitPodDel = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "netperfhairpin"})
+				//Pod delete
+				errPodDel := clientset.CoreV1().Pods(namespace).Delete(context.TODO(), pod.GetName(), metav1.DeleteOptions{})
+				if errPodDel != nil {
+					panic(errPodDel)
+				}
+				PodSize, errWaitPodDel := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "netperfhairpin"})
 				if errWaitPodDel != nil {
 					panic(errWaitPodDel)
 				}
-			}
-			if i < 4 {
+				for len(PodSize.Items) != 0 {
+					PodSize, errWaitPodDel = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "netperfhairpin"})
+					if errWaitPodDel != nil {
+						panic(errWaitPodDel)
+					}
+				}
+
 				continue
 			}
 		} else {
