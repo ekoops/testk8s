@@ -716,7 +716,7 @@ func calculateSpeed(str string, clientset *kubernetes.Clientset, ns string, add 
 
 	//works on strings
 
-	if strings.Contains(str, "Connection refused") || strings.Contains(str, "establish control") || strings.Contains(str, "Connection time out") {
+	if strings.Contains(str, "Connection refused") || strings.Contains(str, "establish control") || strings.Contains(str, "Connection time out") || str == "10000.0" {
 		utils.DeleteNS(clientset, ns)
 		panic("establish control: are you sure there is a netserver listening on 10.103.45.178 at port 15001?")
 	} else {

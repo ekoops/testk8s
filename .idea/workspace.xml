@@ -20,9 +20,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="810481c3-0236-4391-aeb1-7151369e7d97" name="Default Changelist" comment="fixed bug Clean CLuster">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/netperf/netperfPodToPod.go" beforeDir="false" afterPath="$PROJECT_DIR$/netperf/netperfPodToPod.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/testk8s" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -213,10 +211,10 @@
       <screen x="45" y="27" width="1321" height="741" />
     </state>
     <state x="172" y="85" width="1056" height="622" key="MergeDialog/45.27.1321.741@45.27.1321.741" timestamp="1592896387168" />
-    <state x="300" y="118" width="800" height="556" key="Vcs.Push.Dialog.v2" timestamp="1594966148947">
+    <state x="300" y="118" width="800" height="556" key="Vcs.Push.Dialog.v2" timestamp="1595409322851">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
-    <state x="300" y="118" width="800" height="556" key="Vcs.Push.Dialog.v2/45.27.1321.741@45.27.1321.741" timestamp="1594966148947" />
+    <state x="300" y="118" width="800" height="556" key="Vcs.Push.Dialog.v2/45.27.1321.741@45.27.1321.741" timestamp="1595409322851" />
     <state width="670" height="371" key="XDebugger.FullValuePopup" timestamp="1594934456224">
       <screen x="45" y="27" width="1321" height="741" />
     </state>
@@ -263,7 +261,7 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="DlvLineBreakpoint">
           <url>file://$PROJECT_DIR$/netperf/netperfPodToPod.go</url>
-          <line>792</line>
+          <line>791</line>
           <option name="timeStamp" value="46" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="DlvLineBreakpoint">
@@ -288,7 +286,7 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="DlvLineBreakpoint">
           <url>file://$PROJECT_DIR$/netperf/netperfPodToPod.go</url>
-          <line>439</line>
+          <line>435</line>
           <option name="timeStamp" value="51" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="DlvLineBreakpoint">
