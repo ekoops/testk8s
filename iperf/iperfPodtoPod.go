@@ -436,10 +436,14 @@ func parseVel(strs string, clientset *kubernetes.Clientset, ns string) ([]float6
 			panic("error in client server communication")
 		} else {
 			vectString := strings.Split(str[i+1], "0.00-10.00 ")
-			substringSpeed := strings.Split(vectString[1], "  ")
+			substringSpeed := strings.Split(vectString[1], "/sec")
 			vectString[len(vectString)-1] = strings.Replace(vectString[len(vectString)-1], "%", "0", 5)
 			substringCPU := strings.Split(vectString[len(vectString)-1], "(")
-			speed := strings.Split(substringSpeed[2], " ")
+			speedPos := strings.Split(substringSpeed[0], " ")
+			speed := speedPos[len(speedPos)-2]
+			if strings.Contains(speed, " ") {
+				strings.Replace(speed, " ", "0", 2)
+			}
 			cpuSend := strings.Split(substringCPU[len(substringCPU)-3], " ")
 			cpuServ := strings.Split(substringCPU[len(substringCPU)-2], " ")
 			clientCPU[i], errConv = strconv.ParseFloat(cpuSend[len(cpuSend)-2], 64)
@@ -452,18 +456,18 @@ func parseVel(strs string, clientset *kubernetes.Clientset, ns string) ([]float6
 				fmt.Println("Errore nel server conversion cpu " + cpuServ[len(cpuServ)-2])
 				panic(errConv)
 			}
-			velspeed[i], errConv = strconv.ParseFloat(speed[0], 64)
+			velspeed[i], errConv = strconv.ParseFloat(speed, 64)
 			if errConv != nil {
-				fmt.Println("Errore nel speed conversion " + speed[0])
+				fmt.Println("Errore nel speed conversion " + speed)
 				panic(errConv)
 			}
 
-			switch speed[1] {
-			case "Mbits/sec":
+			switch speedPos[len(speedPos)-1] {
+			case "Mbits":
 				velspeed[i] = velspeed[i] / 1000
-			case "Kbits/sec":
+			case "Kbits":
 				velspeed[i] = velspeed[i] / 1000000
-			case "Gbits/sec":
+			case "Gbits":
 				fmt.Println("Ok, Gbits/sec")
 			}
 		}
