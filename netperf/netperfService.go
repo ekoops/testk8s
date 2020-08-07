@@ -17,10 +17,10 @@ import (
 	"testk8s/utils"
 )
 
-func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool, fileoutput *os.File) string {
+func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool, fileoutput *os.File, numberServices int) string {
 
 	node = utils.SetNodeSelector(casus)
-	svcCr := initializeTCPService(multiple, clientset, namespace, "netperfserver")
+	svcCr := initializeTCPService(multiple, clientset, namespace, "netperfserver", numberServices)
 	best := "10000.0"
 	/*
 		netSpeeds := make([]float64, iteration)
@@ -415,9 +415,9 @@ func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool) strin
 	return fmt.Sprintf("%f", avgSp) + " Gbits/sec, confidence avg" + fmt.Sprintf("%f", confidenceAVG(netSpeeds, confidenceArray, float64(iteration))) + " and cpu client/server usage : " + fmt.Sprintf("%f", avgClient) + "error: " + fmt.Sprintf("%f", CpuPercCl) + "/" + fmt.Sprintf("%f", avgServer) + ":" + fmt.Sprintf("%f", CpuPercS)
 }*/
 
-func TCPHairpinservice(clientset *kubernetes.Clientset, multiple bool, fileoutput *os.File) string {
+func TCPHairpinservice(clientset *kubernetes.Clientset, multiple bool, fileoutput *os.File, numberServices int) string {
 
-	svcCr := initializeTCPService(multiple, clientset, namespace, "netperfhairpin")
+	svcCr := initializeTCPService(multiple, clientset, namespace, "netperfhairpin", numberServices)
 	var podName string
 	var netSpeeds float64
 	best := "10000.0"
@@ -616,13 +616,13 @@ func UDPHairpinservice(clientset *kubernetes.Clientset, multiple bool) string {
 
 }*/
 
-func initializeTCPService(multiple bool, clientset *kubernetes.Clientset, ns string, label string) *apiv1.Service {
+func initializeTCPService(multiple bool, clientset *kubernetes.Clientset, ns string, label string, numberServices int) *apiv1.Service {
 	nsCr := utils.CreateNS(clientset, ns)
 	fmt.Printf("Test Namespace: %s created\n", nsCr.GetName())
 
 	if multiple {
 		fmt.Println("the program will create multiple services and endpoints")
-		utils.CreateBulk(10, clientset, namespace)
+		utils.CreateBulk(numberServices, clientset, namespace)
 	}
 
 	svc := apiv1.Service{

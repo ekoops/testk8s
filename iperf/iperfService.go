@@ -22,7 +22,7 @@ var nameService = "my-service-iperf"
 var namespaceUDP = "testiperfudp"
 var imageServiceUDP = "leannet/k8s-netperf:latest"
 
-func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool, fileoutput *os.File) string {
+func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool, fileoutput *os.File, numberServices int) string {
 
 	node = utils.SetNodeSelector(casus)
 	nsCR := utils.CreateNS(clientset, namespace)
@@ -36,7 +36,7 @@ func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool, fileo
 
 	if multiple {
 		fmt.Println("the program will create multiple service and endpoints")
-		utils.CreateBulk(10, clientset, namespace)
+		utils.CreateBulk(numberServices, clientset, namespace)
 	}
 	svcCr := createTCPService(clientset, "iperfserver")
 
@@ -225,7 +225,7 @@ func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool, fileo
 
 }
 
-func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool, fileoutput *os.File) string {
+func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool, fileoutput *os.File, numberServices int) string {
 
 	node = utils.SetNodeSelector(casus)
 	nsCR := utils.CreateNS(clientset, namespaceUDP)
@@ -236,7 +236,7 @@ func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool, fileo
 	cpuServ := make([]float64, iteration)
 
 	if multiple {
-		utils.CreateBulk(10, clientset, namespaceUDP)
+		utils.CreateBulk(numberServices, clientset, namespaceUDP)
 	}
 
 	svc := apiv1.Service{

@@ -196,7 +196,7 @@ func createSvc(i int, clientset *kubernetes.Clientset, ns string) *apiv1.Service
 	if errCr != nil {
 		panic(errCr)
 	}
-	fmt.Printf("Service %s created\n", svcCr.GetName())
+	//fmt.Printf("Service %s created\n", svcCr.GetName())
 
 	return svcCr
 }
