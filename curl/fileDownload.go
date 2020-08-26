@@ -74,7 +74,8 @@ func SpeedMovingFileandLatency(clientset *kubernetes.Clientset, numberReplicas i
 			fmt.Print(".")
 		}
 		fmt.Printf("There are %d pods in the cluster\n", len(podvect.Items))
-		for i := 0; i < len(podvect.Items); i++ {
+		lungh := len(podvect.Items)
+		for i := 0; i < lungh; i++ {
 			pod := podvect.Items[i]
 			ctl := 0
 			for ctl != 1 {
@@ -88,6 +89,7 @@ func SpeedMovingFileandLatency(clientset *kubernetes.Clientset, numberReplicas i
 				case apiv1.PodPending:
 					{
 						podvect, errP = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=mycurl"})
+						lungh = len(podvect.Items)
 						if errP != nil {
 							panic(errP)
 						}

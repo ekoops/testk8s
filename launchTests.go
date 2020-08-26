@@ -234,7 +234,7 @@ func main() {
 
 	for i := 0; i < 4; i++ {
 		for j := 0; j < 4; j++ {
-			output = curl.SpeedMovingFileandLatency(clientset, netPolRep[i], 1, fileoutput, netPolServices[i])
+			output = curl.SpeedMovingFileandLatency(clientset, netPolRep[i], 1, fileoutput, netPolServices[j])
 			fmt.Printf("\n%s\n Network speed and latency with a growing number of services and endpoints: %s\n%s\n", stars, output, stars)
 			fileoutput.WriteString("\n" + stars + "\n" + "Network speed and latency with a growing number of services " + strconv.Itoa(netPolServices[i]) + " and endpoints " + strconv.Itoa(netPolRep[i]) + " : " + output + "\n" + stars + "\n")
 		}
@@ -282,7 +282,7 @@ func main() {
 	//parte con netpol installate nel cluster
 	fmt.Println("Network Policies Part")
 	for i := 0; i < 2; i++ {
-		output := iperf.IperfTCPPodtoPod(clientset, 1, fileoutput, true, 1000*i+1)
+		output = iperf.IperfTCPPodtoPod(clientset, 1, fileoutput, true, 1000*i+1)
 		fmt.Printf("\n%s\navg speed of the network Iperf3 TCP: %s\n %s\n", stars, output, stars)
 		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of the network Iperf3 TCP: " + output + "\n" + stars + "\n")
 
