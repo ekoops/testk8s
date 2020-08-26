@@ -8,6 +8,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -23,9 +24,13 @@ var deplName = "serveriperf3"
 var namespace = "testiperf"
 var jobName = "jobiperfclient"
 var image = "networkstatic/iperf3"
+var labelServer = "iperfserver"
+var labelClient = "iperfclient"
 var iteration = 12
 var node = ""
+var namePol string
 var node2 = "node2"
+var networkPolicies *v1.NetworkPolicy
 
 var netSpeeds []float64
 var cpuServ []float64
@@ -33,7 +38,7 @@ var cpuconfC []float64
 var cpuClie []float64
 var cpuconfS []float64
 
-func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *os.File) string {
+func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *os.File, netpol bool, numNetPol int) string {
 
 	node = utils.SetNodeSelector(casus)
 	nsSpec := utils.CreateNS(clientset, namespace)
@@ -43,6 +48,10 @@ func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *os
 	cpuClie := make([]float64, iteration)
 	cpuconfC := make([]float64, iteration)
 	cpuconfS := make([]float64, iteration)
+
+	if netpol {
+		utils.CreateBulk(0, numNetPol, clientset, namespace)
+	}
 	//create one deployment of iperf server
 	//todo vedere come poter velocizzare con nomi diversi per deployment etc (tipo random string per ogni deployment
 	part := 0
@@ -60,13 +69,13 @@ func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *os
 			panic(errD.Error())
 		}
 
-		podvect, errP := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+		podvect, errP := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=iperfserver"})
 		if errP != nil {
 			panic(errP)
 		}
 		fmt.Print("Wait for pod creation..")
 		for {
-			podvect, errP = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+			podvect, errP = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=iperfserver"})
 			if errP != nil {
 				panic(errP)
 			}
@@ -89,7 +98,7 @@ func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *os
 				}
 			case apiv1.PodPending:
 				{
-					podvect, errP = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+					podvect, errP = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=iperfserver"})
 					if errP != nil {
 						panic(errP)
 					}
@@ -113,6 +122,11 @@ func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *os
 			fmt.Printf("Server IP: %s\n", podIP)
 
 		}
+
+		if netpol {
+			namePol = utils.CreateAllNetPol(clientset, numNetPol, namespace, labelServer, labelClient)
+		}
+
 		command := "for i in 0 1 2; do iperf3 -c " + podI.Status.PodIP + " -p 5002 -V -N -t 10 -Z -A 1,2 -M 1448 >> file.txt; sleep 11; done; cat file.txt"
 		fmt.Println("Creating Iperf Client: " + command)
 		jobsClient := clientset.BatchV1().Jobs(namespace)
@@ -218,8 +232,17 @@ func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *os
 			part++
 		}
 		//Clean the cluster
+
 		utils.CleanCluster(clientset, namespace, "app=iperfserver", "app=iperfclient", deplName, jobName, pod.Name)
+		if netpol {
+			utils.DeleteAllPolicies(clientset, namespace, namePol)
+		}
 	}
+
+	if netpol {
+		utils.DeleteBulk(0, numNetPol, clientset, namespace)
+	}
+
 	utils.DeleteNS(clientset, namespace)
 	fmt.Printf("Test Namespace: %s deleted\n", namespace)
 	time.Sleep(10 * time.Second)
@@ -228,7 +251,7 @@ func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *os
 
 }
 
-func IperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *os.File) string {
+func IperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *os.File, netpol bool, numNetPol int) string {
 
 	node = utils.SetNodeSelector(casus)
 	utils.CreateNS(clientset, namespaceUDP)

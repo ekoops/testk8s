@@ -5,11 +5,14 @@ import (
 	"fmt"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/pointer"
 	"strconv"
+	"strings"
+	"time"
 )
 
 func SetNodeSelector(casus int) string {
@@ -107,25 +110,71 @@ func DeleteNS(clientset *kubernetes.Clientset, ns string) {
 	}
 }
 
-func CreateBulk(numberServices int, clientset *kubernetes.Clientset, ns string) {
+func CreateBulk(numberServices int, numberPods int, clientset *kubernetes.Clientset, ns string) {
 	/// this function creates a lot of services & endpoints , that aren't used, but can influence
 	// throughput and CPU usage
-	for i := 0; i < numberServices; i++ {
-		createSvc(i, clientset, ns)
-		createEndpoints(i, clientset, ns)
+	/*for i := 0; i < numberPods; i++ {
+		if numberServices != 0 {
+			for j := 0; j < numberServices/numberPods; j++ {
+				createSvc(j+((numberServices/numberPods)*i), i, clientset, ns)
+			}
+		}
+		createPodsFake(i, clientset, ns)
+	}*/
+	for i := 0; i < numberPods; i++ {
+		if numberServices != 0 {
+			createSvc(i, i, clientset, ns)
+		}
+		createPodsFake(i, clientset, ns)
 	}
+
 }
 
-func DeleteBulk(numberServices int, clientset *kubernetes.Clientset, ns string) {
+func DeleteBulk(numberServices int, numberPods int, clientset *kubernetes.Clientset, ns string) {
 	for i := 0; i < numberServices; i++ {
-		deplName := "randomdepl" + strconv.Itoa(i)
 		nameService := "randomservice" + strconv.Itoa(i)
-		clientset.AppsV1().Deployments(ns).Delete(context.TODO(), deplName, metav1.DeleteOptions{})
 		clientset.CoreV1().Services(ns).Delete(context.TODO(), nameService, metav1.DeleteOptions{})
 	}
+	for i := 0; i < numberPods; i++ {
+		deplName := "randomdepl" + strconv.Itoa(i)
+		clientset.AppsV1().Deployments(ns).Delete(context.TODO(), deplName, metav1.DeleteOptions{})
+	}
 }
 
-func createEndpoints(i int, clientset *kubernetes.Clientset, ns string) {
+func CreateAllNetPol(clientset *kubernetes.Clientset, netpolNumber int, namespace string, labelServer string, labelClient string) string {
+	// vado a bloccare il traffico diretto ai due pods
+	networkPolicies := createNetPol(clientset, namespace, 1, labelServer, " ", "block-all-server")
+	fmt.Printf("Created NetPol %s\n", networkPolicies.GetName())
+	namePol := networkPolicies.GetName()
+
+	networkPolicies = createNetPol(clientset, namespace, 1, labelClient, " ", "block-all-client")
+	fmt.Printf("Created NetPol %s\n", networkPolicies.GetName())
+	namePol = namePol + " " + networkPolicies.GetName()
+
+	//permetto ai due pods di comunicare tra di loro
+	networkPolicies = createNetPol(clientset, namespace, 2, labelServer, labelClient, "permit-iperf-server")
+	namePol = namePol + " " + networkPolicies.GetName()
+	fmt.Printf("Created NetPol %s\n", networkPolicies.GetName())
+	networkPolicies = createNetPol(clientset, namespace, 2, labelClient, labelServer, "permit-iperf-client")
+	namePol = namePol + " " + networkPolicies.GetName()
+	fmt.Printf("Created NetPol %s\n", networkPolicies.GetName())
+
+	//permetto agli altri pods di comunicare con pod1 e pod2
+	for i := 0; i < netpolNumber; i++ {
+		netPolName := "netpol-client-" + strconv.Itoa(i)
+		label := "casualserver" + strconv.Itoa(i)
+		networkPolicies = createNetPol(clientset, namespace, 2, labelServer, label, netPolName+"-server")
+		namePol = namePol + " " + networkPolicies.GetName()
+		fmt.Printf("Created NetPol %s\n", networkPolicies.GetName())
+		networkPolicies = createNetPol(clientset, namespace, 2, labelClient, label, netPolName+"-client")
+		namePol = namePol + " " + networkPolicies.GetName()
+		fmt.Printf("Created NetPol %s\n", networkPolicies.GetName())
+	}
+
+	return namePol
+}
+
+func createPodsFake(i int, clientset *kubernetes.Clientset, ns string) {
 	deplName := "randomdepl" + strconv.Itoa(i)
 	label := "casualserver" + strconv.Itoa(i)
 	/*var p int32
@@ -169,8 +218,8 @@ func createEndpoints(i int, clientset *kubernetes.Clientset, ns string) {
 	fmt.Printf("Created deployment %q.\n", res.GetObjectMeta().GetName())
 }
 
-func createSvc(i int, clientset *kubernetes.Clientset, ns string) *apiv1.Service {
-	nameService := "randomservice" + strconv.Itoa(i)
+func createSvc(j int, i int, clientset *kubernetes.Clientset, ns string) *apiv1.Service {
+	nameService := "randomservice" + strconv.Itoa(j)
 	label := "casualserver" + strconv.Itoa(i)
 
 	var p int32
@@ -195,6 +244,7 @@ func createSvc(i int, clientset *kubernetes.Clientset, ns string) *apiv1.Service
 	svcCr, errCr := clientset.CoreV1().Services(ns).Create(context.TODO(), &svcRandom, metav1.CreateOptions{})
 	if errCr != nil {
 		panic(errCr)
+		DeleteNS(clientset, ns)
 	}
 	//fmt.Printf("Service %s created\n", svcCr.GetName())
 
@@ -258,6 +308,81 @@ func CleanCluster(clientset *kubernetes.Clientset, ns string, labelServer string
 		PodSize, errWaitPodDel = clientset.CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: labelClient})
 		if errWaitPodDel != nil {
 			panic(errWaitPodDel)
+		}
+	}
+	time.Sleep(30 * time.Second)
+}
+
+func createNetPol(clientset *kubernetes.Clientset, namespace string, casus int, labelserver string, labelclient string, nameNetpol string) *v1.NetworkPolicy {
+	var netPol *v1.NetworkPolicy
+	if casus == 1 {
+		netPol = &v1.NetworkPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: nameNetpol},
+			Spec: v1.NetworkPolicySpec{
+				PodSelector: metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app": labelserver,
+					},
+				},
+				PolicyTypes: []v1.PolicyType{v1.PolicyTypeEgress, v1.PolicyTypeIngress},
+				Ingress:     []v1.NetworkPolicyIngressRule{},
+				Egress:      []v1.NetworkPolicyEgressRule{},
+			},
+		}
+	} else {
+		netPol = &v1.NetworkPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: nameNetpol},
+			Spec: v1.NetworkPolicySpec{
+				PodSelector: metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app": labelserver,
+					},
+				},
+				PolicyTypes: []v1.PolicyType{v1.PolicyTypeEgress, v1.PolicyTypeIngress},
+				Ingress: []v1.NetworkPolicyIngressRule{
+					{
+						From: []v1.NetworkPolicyPeer{{
+							PodSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"app": labelclient,
+								},
+							},
+						}},
+					},
+				},
+				Egress: []v1.NetworkPolicyEgressRule{
+					{
+						To: []v1.NetworkPolicyPeer{{
+							PodSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"app": labelclient,
+								},
+							},
+						}},
+					},
+				},
+			},
+		}
+	}
+	networkpolicies, error := clientset.NetworkingV1().NetworkPolicies(namespace).Create(context.TODO(), netPol, metav1.CreateOptions{})
+	if error != nil {
+		fmt.Println("Errore nella creazione della policies")
+		DeleteNS(clientset, namespace)
+		panic(error)
+	}
+	return networkpolicies
+}
+
+func DeleteAllPolicies(clientset *kubernetes.Clientset, namespace string, namePol string) {
+	allNames := strings.Split(namePol, " ")
+
+	for _, singlePol := range allNames {
+		fmt.Println("deleted netpol with name: " + singlePol)
+		if err := clientset.NetworkingV1().NetworkPolicies(namespace).Delete(context.TODO(), singlePol, metav1.DeleteOptions{}); err != nil {
+			DeleteNS(clientset, namespace)
+			panic(err)
 		}
 	}
 }

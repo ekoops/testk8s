@@ -36,7 +36,7 @@ func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool, fileo
 
 	if multiple {
 		fmt.Println("the program will create multiple service and endpoints")
-		utils.CreateBulk(numberServices, clientset, namespace)
+		utils.CreateBulk(numberServices, numberServices, clientset, namespace)
 	}
 	svcCr := createTCPService(clientset, "iperfserver")
 
@@ -108,7 +108,7 @@ func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool, fileo
 			fmt.Printf("Service IP: %s\n", svcIP)
 		}
 
-		command := "for i in 0 1 2; do iperf3 -c " + serviceC.Spec.ClusterIP + " -p 5001 -V -N -t 10 -Z -M 1448 >> file.txt; sleep 11; done;cat file.txt"
+		command := "for i in 0 1 2; do iperf3 -c " + serviceC.Spec.ClusterIP + " -p 5001 -V -N -t 10 -Z -A 1,2 -M 1448 >> file.txt; sleep 11; done;cat file.txt"
 		fmt.Println("Creating Iperf Client: " + command)
 		jobsClient := clientset.BatchV1().Jobs(namespace)
 		job := &batchv1.Job{
@@ -217,7 +217,7 @@ func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool, fileo
 
 	}
 
-	utils.DeleteBulk(10, clientset, namespace)
+	utils.DeleteBulk(numberServices, numberServices, clientset, namespace)
 	utils.DeleteNS(clientset, namespace)
 	fmt.Printf("Namespace %s deleted \n", namespace)
 	avgS, avgCPUC, avgCPUS, _, _ := utils.AvgSpeed(netSpeeds, cpuClie, cpuServ, cpuconfC, cpuconfS, float64(iteration))
@@ -236,7 +236,7 @@ func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool, fileo
 	cpuServ := make([]float64, iteration)
 
 	if multiple {
-		utils.CreateBulk(numberServices, clientset, namespaceUDP)
+		utils.CreateBulk(numberServices, numberServices, clientset, namespaceUDP)
 	}
 
 	svc := apiv1.Service{
@@ -430,7 +430,9 @@ func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool, fileo
 		}
 		utils.CleanCluster(clientset, namespaceUDP, "app=iperfserver", "app=iperfclient", deplName, jobName, pod.Name)
 	}
-
+	if multiple {
+		utils.DeleteBulk(numberServices, numberServices, clientset, namespaceUDP)
+	}
 	utils.DeleteNS(clientset, namespaceUDP)
 	fmt.Printf("Namespace %s deleted \n", namespaceUDP)
 	avgS, _, _, _, _ := utils.AvgSpeed(netSpeeds, cpuClie, cpuServ, cpuconfC, cpuconfS, float64(iteration))
@@ -470,6 +472,7 @@ func parseVelServiceUdp(str string, clientset *kubernetes.Clientset, udp string)
 	return velspeed
 }
 
+/*
 func TCPHairpinservice(clientset *kubernetes.Clientset, multiple bool) string {
 	nsCR := utils.CreateNS(clientset, namespace)
 	fmt.Printf("Namespace %s created \n", nsCR.Name)
@@ -480,8 +483,8 @@ func TCPHairpinservice(clientset *kubernetes.Clientset, multiple bool) string {
 	}
 	netSpeeds := make([]float64, iteration)
 
-	/*cpuconfC := make([]float64, iteration)
-	cpuconfS := make([]float64, iteration)*/
+	cpuconfC := make([]float64, iteration)
+	cpuconfS := make([]float64, iteration)
 	svcCr := createTCPService(clientset, "iperfhairpin")
 
 	for i := 0; i < iteration; i++ {
@@ -624,7 +627,7 @@ func TCPHairpinservice(clientset *kubernetes.Clientset, multiple bool) string {
 	fmt.Printf("Namespace %s deleted \n", namespace)
 	return fmt.Sprintf("%f\n", netSpeeds[0])
 }
-
+*/
 /*
 func UDPHairpinservice(clientset *kubernetes.Clientset, multiple bool) string {
 
