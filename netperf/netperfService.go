@@ -203,7 +203,7 @@ func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool, fileo
 		utils.CleanCluster(clientset, namespace, "app=netperfserver", "app=netperfclient", deplName, jobName, pod.Name)
 	}
 	netSpeeds, confidenceArray, cpuC, cpuS, confidenceArrayCpuC, confidenceArrayCpuS = calculateSpeed(best, clientset, namespace, 0)
-	utils.DeleteBulk(10, clientset, namespace)
+	utils.DeleteBulk(10, 10, clientset, namespace)
 	utils.DeleteNS(clientset, namespace)
 	fmt.Printf("Test Namespace: %s deleted\n", namespace)
 	/*
@@ -604,7 +604,7 @@ func TCPHairpinservice(clientset *kubernetes.Clientset, multiple bool, fileoutpu
 			panic(errWaitPodDel)
 		}
 	}
-	utils.DeleteBulk(10, clientset, namespace)
+	utils.DeleteBulk(10, 10, clientset, namespace)
 	utils.DeleteNS(clientset, namespace)
 	//avgSp, avgClient, avgServer, CpuPercCl, CpuPercS := utils.AvgSpeed(netSpeeds, cpuC, cpuS, confidenceArrayCpuC, confidenceArrayCpuS, float64(iteration))
 	//return fmt.Sprintf("%f", avgSp) + " Gbits/sec, confidence avg" + fmt.Sprintf("%f", confidenceAVG(netSpeeds, confidenceArray, float64(iteration))) + " and cpu client/server usage : " + fmt.Sprintf("%f", avgClient) + "error: " + fmt.Sprintf("%f", CpuPercCl) + "/" + fmt.Sprintf("%f", avgServer) + ":" + fmt.Sprintf("%f", CpuPercS)
@@ -622,7 +622,7 @@ func initializeTCPService(multiple bool, clientset *kubernetes.Clientset, ns str
 
 	if multiple {
 		fmt.Println("the program will create multiple services and endpoints")
-		utils.CreateBulk(numberServices, clientset, namespace)
+		utils.CreateBulk(numberServices, numberServices, clientset, namespace)
 	}
 
 	svc := apiv1.Service{
