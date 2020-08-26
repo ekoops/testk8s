@@ -21,21 +21,31 @@ import (
 
 var node = ""
 var node2 = "node2"
-var iteration = 12
-var max = 0.0
-var min = 10000.0
+var iteration = 6
+var maxSpeed = 0.0
+var minSpeed = 10000.0
+var maxLatency = 0.0
+var minLatency = 10000.0
 
-func SpeedMovingFile(clientset *kubernetes.Clientset, numberReplicas int, casus int, fileoutput *os.File) string {
+func SpeedMovingFileandLatency(clientset *kubernetes.Clientset, numberReplicas int, casus int, fileoutput *os.File, servicesNumber int) string {
 
 	node = utils.SetNodeSelector(casus)
 	var maxPos = -1
 	var minPos = -1
+	var maxPosLat = -1
+	var minPosLat = -1
 	namespace := "namespacecurl" + strconv.Itoa(casus)
 	ns := utils.CreateNS(clientset, namespace)
 	netSpeeds := make([]float64, iteration)
+	netLatency := make([]float64, iteration)
 	println("creato namespace " + ns.GetName())
 	svcCr := createCurlService(clientset, "mycurlservice", namespace, "mycurl")
 	println("creato service " + svcCr.GetName())
+	var errLatencyConv error
+
+	if servicesNumber > 1 {
+		utils.CreateBulk(servicesNumber, servicesNumber, clientset, namespace)
+	}
 
 	for i := 0; i < iteration; i++ {
 		dep := createCurlDeployment(namespace, numberReplicas, "curlserver")
@@ -45,9 +55,7 @@ func SpeedMovingFile(clientset *kubernetes.Clientset, numberReplicas int, casus 
 			panic(errDepl)
 		}
 		fmt.Printf("Created deployment %q.\n", res.GetObjectMeta().GetName())
-
-		time.Sleep(10 * time.Second)
-
+		fmt.Println(time.Now())
 		podvect, errP := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=mycurl"})
 		if errP != nil {
 			panic(errP)
@@ -74,6 +82,7 @@ func SpeedMovingFile(clientset *kubernetes.Clientset, numberReplicas int, casus 
 				case apiv1.PodRunning:
 					{
 						ctl = 1
+						fmt.Printf("\n pod %s è Running \n", pod.GetName())
 						break
 					}
 				case apiv1.PodPending:
@@ -90,8 +99,8 @@ func SpeedMovingFile(clientset *kubernetes.Clientset, numberReplicas int, casus 
 			}
 		}
 		fmt.Printf("tutti i deployment dovrebbero essere running")
-		command := "apt-get update -y; apt-get install curl -y; curl http://" + svcCr.Spec.ClusterIP + ":8080 -o dev/null >> file.txt;cat file.txt"
-
+		fmt.Println(time.Now())
+		command := "curl http://" + svcCr.Spec.ClusterIP + ":8080 -o dev/null -w \"TTFB: %{time_starttransfer} \" >> file.txt;cat file.txt"
 		jobsClient := clientset.BatchV1().Jobs(namespace)
 		job := &batchv1.Job{
 			ObjectMeta: metav1.ObjectMeta{
@@ -125,6 +134,8 @@ func SpeedMovingFile(clientset *kubernetes.Clientset, numberReplicas int, casus 
 			fmt.Println(errJ.Error())
 			panic(errJ)
 		}
+
+		fmt.Println(time.Now())
 		fmt.Printf("Created job %q.\n", result1.GetObjectMeta().GetName())
 		podClient, errC := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=curlclient"})
 		if errC != nil {
@@ -140,6 +151,7 @@ func SpeedMovingFile(clientset *kubernetes.Clientset, numberReplicas int, casus 
 			}
 		}
 		fmt.Printf("Created pod %q.\n", podClient.Items[0].Name)
+		fmt.Println(time.Now())
 
 		podC := podClient.Items[0]
 		var str string
@@ -169,6 +181,7 @@ func SpeedMovingFile(clientset *kubernetes.Clientset, numberReplicas int, casus 
 					}
 					str = buf.String()
 					fileoutput.WriteString(str)
+					fileoutput.WriteString("\n")
 					ctl = 1
 					break
 				}
@@ -177,86 +190,123 @@ func SpeedMovingFile(clientset *kubernetes.Clientset, numberReplicas int, casus 
 			}
 		}
 
+		if strings.Contains(str, " Failed to connect ") {
+			i--
+			fmt.Printf("Errore di connessione al svc")
+			utils.CleanCluster(clientset, namespace, "curlserver", "curlclient", dep.GetName(), job.GetName(), podC.GetName())
+			continue
+		}
 		vectString := strings.Split(str, "\n")
-		fmt.Printf("%s", vectString[len(vectString)-1])
-		vectString = strings.Split(vectString[len(vectString)-2], "0")
+		latencyString := strings.Split(vectString[len(vectString)-1], ":")[len(strings.Split(vectString[len(vectString)-1], ":"))-1]
+		latencyString = strings.ReplaceAll(latencyString, " ", "")
+		netLatency[i], errLatencyConv = strconv.ParseFloat(latencyString, 64)
+
+		if netLatency[i] > maxLatency {
+			maxPosLat = i
+			maxLatency = netLatency[i]
+		}
+		if netLatency[i] < minLatency {
+			minPosLat = i
+			minLatency = netLatency[i]
+		}
+
+		if errLatencyConv != nil {
+			fmt.Println("Errore nel speed conversion line Mega")
+			panic(errLatencyConv)
+		}
+		vectString = strings.Split(vectString[len(vectString)-2], " 0 ")
 		vectString[len(vectString)-2] = strings.ReplaceAll(vectString[len(vectString)-2], " ", "")
+		fmt.Printf("%s", vectString[len(vectString)-2])
 		switch vectString[len(vectString)-2][len(vectString[len(vectString)-2])-1] {
 		case 'M':
 			{
-				vectString[len(vectString)-2] = strings.Replace(vectString[len(vectString)-2], "M", "0", 2)
+				vectString[len(vectString)-2] = strings.Replace(vectString[len(vectString)-2], "M", "", 2)
 				speed, errConv := strconv.ParseFloat(vectString[len(vectString)-2], 64)
 				if errConv != nil {
 					fmt.Println("Errore nel speed conversion line Mega")
 					panic(errConv)
 				}
 				speed = speed / 1000
-				if speed > max {
-					max = speed
+				if speed > maxSpeed {
+					maxSpeed = speed
 					maxPos = i
 				}
-				if speed <= min {
-					min = speed
+				if speed <= minSpeed {
+					minSpeed = speed
 					minPos = i
 				}
 				netSpeeds[i] = speed
 			}
 		case 'K':
 			{
-				vectString[len(vectString)-2] = strings.Replace(vectString[len(vectString)-2], "M", "0", 2)
+				vectString[len(vectString)-2] = strings.Replace(vectString[len(vectString)-2], "K", "", 2)
 				speed, errConv := strconv.ParseFloat(vectString[len(vectString)-2], 64)
 				if errConv != nil {
 					fmt.Println("Errore nel speed conversion line Kylo")
 					panic(errConv)
 				}
 				speed = speed / 1000000
-				if speed > max {
-					max = speed
+				if speed > maxSpeed {
+					maxSpeed = speed
 					maxPos = i
 				}
-				if speed <= min {
-					min = speed
+				if speed <= minSpeed {
+					minSpeed = speed
 					minPos = i
 				}
 				netSpeeds[i] = speed
 			}
 		case 'G':
 			{
-				vectString[len(vectString)-2] = strings.Replace(vectString[len(vectString)-2], "M", "0", 2)
+				vectString[len(vectString)-2] = strings.Replace(vectString[len(vectString)-2], "G", "", 2)
 				speed, errConv := strconv.ParseFloat(vectString[len(vectString)-2], 64)
 				if errConv != nil {
 					fmt.Println("Errore nel speed conversion line Giga")
 					panic(errConv)
 				}
-				if speed > max {
-					max = speed
+				if speed > maxSpeed {
+					maxSpeed = speed
 					maxPos = i
 				}
-				if speed <= min {
-					min = speed
+				if speed <= minSpeed {
+					minSpeed = speed
 					minPos = i
 				}
 				netSpeeds[i] = speed
 			}
+
 		}
 
-		utils.CleanCluster(clientset, namespace, "mycurl", "curlclient", dep.GetName(), job.GetName(), podC.GetName())
+		utils.CleanCluster(clientset, namespace, "curlserver", "curlclient", dep.GetName(), job.GetName(), podC.GetName())
 	}
 
 	netSpeeds[maxPos] = 0.0
+	fmt.Printf("%f max \n", netLatency[maxPosLat])
+	netLatency[maxPosLat] = 0.0
 	netSpeeds[minPos] = 0.0
+	fmt.Printf("%f min \n", netLatency[minPosLat])
+	netLatency[minPosLat] = 0.0
 
-	return speedAVG(netSpeeds)
+	if servicesNumber > 1 {
+		utils.DeleteBulk(servicesNumber, servicesNumber, clientset, namespace)
+	}
+
+	utils.DeleteNS(clientset, namespace)
+	return speedAVG(netSpeeds, netLatency)
 }
 
-func speedAVG(speeds []float64) string {
-	var sum = 0.0
+func speedAVG(speeds []float64, latencies []float64) string {
+	var sumSpeed = 0.0
+	var sumLatency = 0.0
 
 	for i := 0; i < iteration; i++ {
-		sum = sum + speeds[i]
+		sumSpeed = sumSpeed + speeds[i]
+		sumLatency = sumLatency + latencies[i]
 	}
-	s := fmt.Sprintf("%f", sum/10)
-	return s
+	iteration = iteration - 2
+	speed := fmt.Sprintf("%f", sumSpeed/float64(iteration))
+	latency := fmt.Sprintf("%f", sumLatency/float64(iteration))
+	return speed + " and latency is: " + latency
 }
 
 func createCurlDeployment(namespace string, replicas int, deplName string) *appsv1.Deployment {
@@ -299,7 +349,7 @@ func createCurlDeployment(namespace string, replicas int, deplName string) *apps
 							Name:  "install",
 							Image: "busybox",
 							Command: []string{
-								"wget", "-O", "/work-dir/index.html", "http://speedtest.tele2.net/1GB.zip", /*http://speedtest.tele2.net/100MB.zip*/
+								"/bin/sh", "-c", "dd if=/dev/zero of=/work-dir/index.html bs=1024 count=102400",
 							},
 							VolumeMounts: []apiv1.VolumeMount{
 								{
@@ -349,6 +399,6 @@ func createCurlService(clientset *kubernetes.Clientset, nameService string, ns s
 	if errCr != nil {
 		panic(errCr)
 	}
-	fmt.Println("Service my-service-iperf created " + svcCr.GetName())
+	fmt.Println("Service: " + svcCr.GetName() + " created")
 	return svcCr
 }
