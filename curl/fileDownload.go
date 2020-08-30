@@ -88,7 +88,6 @@ func SpeedMovingFileandLatency(clientset *kubernetes.Clientset, numberReplicas i
 					{
 						podvect, errP = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=mycurl"})
 						lungh = len(podvect.Items)
-						fmt.Printf("\n%d lunghezza\n", lungh)
 						if errP != nil {
 							panic(errP)
 						}
@@ -203,10 +202,12 @@ func SpeedMovingFileandLatency(clientset *kubernetes.Clientset, numberReplicas i
 		netLatency[i], errLatencyConv = strconv.ParseFloat(latencyString, 64)
 
 		if netLatency[i] > maxLatency {
+			fmt.Printf("\naggiorno massima latenza all'%d con %f\n", i, netLatency[i])
 			maxPosLat = i
 			maxLatency = netLatency[i]
 		}
-		if netLatency[i] < minLatency {
+		if netLatency[i] <= minLatency {
+			fmt.Printf("\naggiorno minima latenza all'%d con %f\n", i, netLatency[i])
 			minPosLat = i
 			minLatency = netLatency[i]
 		}
@@ -281,9 +282,9 @@ func SpeedMovingFileandLatency(clientset *kubernetes.Clientset, numberReplicas i
 
 		utils.CleanCluster(clientset, namespace, "curlserver", "curlclient", dep.GetName(), job.GetName(), podC.GetName())
 	}
-	fmt.Println("\nSono arrivato qui e mi blocco")
 	fmt.Printf("\n %d max pos\n", maxPos)
 	netSpeeds[maxPos] = 0.0
+	fmt.Println("\nSono arrivato qui e mi blocco 1")
 	fmt.Printf("%f max \n", netLatency[maxPosLat])
 	netLatency[maxPosLat] = 0.0
 	netSpeeds[minPos] = 0.0
