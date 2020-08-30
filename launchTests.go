@@ -231,7 +231,7 @@ func main() {
 		// Parte aggiuntiva di curl
 	*/
 	output := "ciao"
-	for i := 0; i < 3; i++ {
+	for i := 1; i < 3; i++ {
 		for j := 0; j < 1; j++ {
 			output = curl.SpeedMovingFileandLatency(clientset, netPolRep[i], 1, fileoutput, netPolServices[j])
 			fmt.Printf("\n%s\n Network speed and latency with a growing number of services and endpoints: %s\n%s\n", stars, output, stars)
