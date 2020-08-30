@@ -22,9 +22,9 @@ import (
 var node = ""
 var node2 = "node2"
 var iteration = 6
-var maxSpeed = 0.0
+var maxSpeed = -10.0
 var minSpeed = 10000.0
-var maxLatency = 0.0
+var maxLatency = -10.0
 var minLatency = 10000.0
 
 func SpeedMovingFileandLatency(clientset *kubernetes.Clientset, numberReplicas int, casus int, fileoutput *os.File, servicesNumber int) string {
@@ -60,20 +60,18 @@ func SpeedMovingFileandLatency(clientset *kubernetes.Clientset, numberReplicas i
 		if errP != nil {
 			panic(errP)
 		}
-		fmt.Print("Wait for pod creation..")
-		for {
+		var num = len(podvect.Items)
+		fmt.Printf("Wait for pod creation.. %d\n", num)
+		for num < numberReplicas {
 			podvect, errP = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=mycurl"})
+			num = len(podvect.Items)
 			if errP != nil {
 				panic(errP)
-			}
-			var num int = len(podvect.Items)
-			if num != 0 {
-				fmt.Printf("\n")
-				break
 			}
 			fmt.Print(".")
 		}
 		fmt.Printf("There are %d pods in the cluster\n", len(podvect.Items))
+
 		lungh := len(podvect.Items)
 		for i := 0; i < lungh; i++ {
 			pod := podvect.Items[i]
@@ -83,13 +81,14 @@ func SpeedMovingFileandLatency(clientset *kubernetes.Clientset, numberReplicas i
 				case apiv1.PodRunning:
 					{
 						ctl = 1
-						fmt.Printf("\n pod %s è Running \n", pod.GetName())
+						fmt.Printf("\n pod %s è Running %d \n", pod.GetName(), i)
 						break
 					}
 				case apiv1.PodPending:
 					{
 						podvect, errP = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=mycurl"})
 						lungh = len(podvect.Items)
+						fmt.Printf("\n%d lunghezza\n", lungh)
 						if errP != nil {
 							panic(errP)
 						}
@@ -212,13 +211,14 @@ func SpeedMovingFileandLatency(clientset *kubernetes.Clientset, numberReplicas i
 			minLatency = netLatency[i]
 		}
 
+		fmt.Printf("\n%f latenza\n", netLatency[i])
 		if errLatencyConv != nil {
-			fmt.Println("Errore nel speed conversion line Mega")
+			fmt.Println("Errore nel speed conversion line 216")
 			panic(errLatencyConv)
 		}
 		vectString = strings.Split(vectString[len(vectString)-2], " 0 ")
 		vectString[len(vectString)-2] = strings.ReplaceAll(vectString[len(vectString)-2], " ", "")
-		fmt.Printf("%s", vectString[len(vectString)-2])
+		fmt.Printf("%s\n", vectString[len(vectString)-2])
 		switch vectString[len(vectString)-2][len(vectString[len(vectString)-2])-1] {
 		case 'M':
 			{
@@ -281,7 +281,8 @@ func SpeedMovingFileandLatency(clientset *kubernetes.Clientset, numberReplicas i
 
 		utils.CleanCluster(clientset, namespace, "curlserver", "curlclient", dep.GetName(), job.GetName(), podC.GetName())
 	}
-
+	fmt.Println("\nSono arrivato qui e mi blocco")
+	fmt.Printf("\n %d max pos\n", maxPos)
 	netSpeeds[maxPos] = 0.0
 	fmt.Printf("%f max \n", netLatency[maxPosLat])
 	netLatency[maxPosLat] = 0.0
