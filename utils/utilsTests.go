@@ -272,10 +272,9 @@ func CleanCluster(clientset *kubernetes.Clientset, ns string, labelServer string
 	if errWaitPodSDel != nil {
 		panic(errWaitPodSDel)
 	}
-
+	fmt.Printf("\n%d pod terminating\n", len(PodSize.Items))
 	for len(PodSize.Items) != 0 {
 		PodSize, errWaitPodSDel = clientset.CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: labelServer})
-		fmt.Printf("\n%d pod terminating\n", len(PodSize.Items))
 		if errWaitPodSDel != nil {
 			panic(errWaitPodSDel)
 		}
