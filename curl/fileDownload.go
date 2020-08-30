@@ -304,7 +304,7 @@ func SpeedMovingFileandLatency(clientset *kubernetes.Clientset, numberReplicas i
 
 		}
 
-		utils.CleanCluster(clientset, namespace, "mycurl", "curlclient", dep.GetName(), job.GetName(), podC.GetName())
+		utils.CleanCluster(clientset, namespace, "app=mycurl", "curlclient", dep.GetName(), job.GetName(), podC.GetName())
 	}
 	fmt.Printf("\n %d max pos: %f\n", maxPos, netSpeeds[maxPos])
 	netSpeeds[maxPos] = 0.0
