@@ -12,7 +12,6 @@ import (
 	"k8s.io/utils/pointer"
 	"strconv"
 	"strings"
-	"time"
 )
 
 func SetNodeSelector(casus int) string {
@@ -313,7 +312,6 @@ func CleanCluster(clientset *kubernetes.Clientset, ns string, labelServer string
 			panic(errWaitPodDel)
 		}
 	}
-	time.Sleep(30 * time.Second)
 }
 
 func createNetPol(clientset *kubernetes.Clientset, namespace string, casus int, labelserver string, labelclient string, nameNetpol string) *v1.NetworkPolicy {
