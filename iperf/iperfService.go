@@ -446,7 +446,7 @@ func parseVelServiceUdp(str string, clientset *kubernetes.Clientset, udp string)
 	var errConv error
 	strs := strings.Split(str, "Client connecting")
 	for i := 0; i < 3; i++ {
-		vectString := strings.Split(strs[i+1], "0.0-10.0 ")
+		vectString := strings.Split(strs[i+1], "0.0-10.")
 		substring := strings.Split(vectString[1], "\n")
 		substring = strings.Split(substring[0], " ")
 		fmt.Println(substring[len(substring)-1])

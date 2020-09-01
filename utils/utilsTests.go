@@ -127,6 +127,15 @@ func CreateBulk(numberServices int, numberPods int, clientset *kubernetes.Client
 		createPodsFake(i, clientset, ns)
 	}
 
+	podfakeVect, err := clientset.CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		DeleteNS(clientset, ns)
+		panic(err)
+	}
+	for len(podfakeVect.Items) < numberPods {
+		podfakeVect, err = clientset.CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{})
+	}
+
 }
 
 func DeleteBulk(numberServices int, numberPods int, clientset *kubernetes.Clientset, ns string) {
@@ -251,34 +260,37 @@ func createSvc(j int, i int, clientset *kubernetes.Clientset, ns string) *apiv1.
 }
 
 func CleanCluster(clientset *kubernetes.Clientset, ns string, labelServer string, labelClient string, deplName string, jobName string, podName string) {
-	errDplDel := clientset.AppsV1().Deployments(ns).Delete(context.TODO(), deplName, metav1.DeleteOptions{})
-	if errDplDel != nil {
-		panic(errDplDel)
-	}
-
-	DeplSize, errWaitDeplDel := clientset.AppsV1().Deployments(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: labelServer})
-	if errWaitDeplDel != nil {
-		panic(errWaitDeplDel)
-	}
-	for len(DeplSize.Items) != 0 {
-		DeplSize, errWaitDeplDel = clientset.AppsV1().Deployments(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: labelServer})
+	if deplName != "" {
+		errDplDel := clientset.AppsV1().Deployments(ns).Delete(context.TODO(), deplName, metav1.DeleteOptions{})
+		if errDplDel != nil {
+			panic(errDplDel)
+		}
+		DeplSize, errWaitDeplDel := clientset.AppsV1().Deployments(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: labelServer})
 		if errWaitDeplDel != nil {
 			panic(errWaitDeplDel)
 		}
-	}
-	//wait until pod deply delete
-	PodSize, errWaitPodSDel := clientset.CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: labelServer})
-	if errWaitPodSDel != nil {
-		panic(errWaitPodSDel)
-	}
-	fmt.Printf("\n%d pod terminating\n", len(PodSize.Items))
-	for len(PodSize.Items) != 0 {
-		PodSize, errWaitPodSDel = clientset.CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: labelServer})
-		if errWaitPodSDel != nil {
-			panic(errWaitPodSDel)
+		for len(DeplSize.Items) != 0 {
+			DeplSize, errWaitDeplDel = clientset.AppsV1().Deployments(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: labelServer})
+			if errWaitDeplDel != nil {
+				panic(errWaitDeplDel)
+			}
 		}
 	}
 
+	//wait until pod deply delete
+	if labelServer != "" {
+		PodSize, errWaitPodSDel := clientset.CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: labelServer})
+		if errWaitPodSDel != nil {
+			panic(errWaitPodSDel)
+		}
+		fmt.Printf("\n%d pod terminating\n", len(PodSize.Items))
+		for len(PodSize.Items) != 0 {
+			PodSize, errWaitPodSDel = clientset.CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{LabelSelector: labelServer})
+			if errWaitPodSDel != nil {
+				panic(errWaitPodSDel)
+			}
+		}
+	}
 	fmt.Println("arrivo qui con ancora degli item")
 
 	//Job delete
