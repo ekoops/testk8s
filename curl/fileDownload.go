@@ -26,14 +26,7 @@ var iteration = 6
 func SpeedMovingFileandLatency(clientset *kubernetes.Clientset, numberReplicas int, casus int, fileoutput *os.File, servicesNumber int) string {
 
 	node = utils.SetNodeSelector(casus)
-	var maxPos = -1
-	var minPos = -1
-	var maxPosLat = -1
-	var minPosLat = -1
-	var maxSpeed = -10.0
-	var minSpeed = 10000.0
-	var maxLatency = -10.0
-	var minLatency = 10000.0
+
 	namespace := "namespacecurl" + strconv.Itoa(casus)
 	ns := utils.CreateNS(clientset, namespace)
 	netSpeeds := make([]float64, iteration)
@@ -41,74 +34,73 @@ func SpeedMovingFileandLatency(clientset *kubernetes.Clientset, numberReplicas i
 	println("creato namespace " + ns.GetName())
 	svcCr := createCurlService(clientset, "mycurlservice", namespace, "mycurl")
 	println("creato service " + svcCr.GetName())
-	var errLatencyConv error
 
 	if servicesNumber > 1 {
 		utils.CreateBulk(servicesNumber, servicesNumber, clientset, namespace)
 	}
 
-	for i := 0; i < iteration; i++ {
-		fmt.Printf("\n valori attuali: %f %f %f %f\n", minSpeed, minLatency, maxSpeed, maxLatency)
-		dep := createCurlDeployment(namespace, numberReplicas, "curlserver")
-		fmt.Println("Creating deployment...")
-		res, errDepl := clientset.AppsV1().Deployments(namespace).Create(context.TODO(), dep, metav1.CreateOptions{})
-		if errDepl != nil {
-			utils.DeleteNS(clientset, namespace)
-			panic(errDepl)
-		}
-		fmt.Printf("Created deployment %q.\n", res.GetObjectMeta().GetName())
-		fmt.Println(time.Now())
-		podvect, errP := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=mycurl"})
+	dep := createCurlDeployment(namespace, numberReplicas, "curlserver")
+	fmt.Println("Creating deployment...")
+	res, errDepl := clientset.AppsV1().Deployments(namespace).Create(context.TODO(), dep, metav1.CreateOptions{})
+	if errDepl != nil {
+		utils.DeleteNS(clientset, namespace)
+		panic(errDepl)
+	}
+	fmt.Printf("Created deployment %q.\n", res.GetObjectMeta().GetName())
+	fmt.Println(time.Now())
+	podvect, errP := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=mycurl"})
+	if errP != nil {
+		utils.DeleteNS(clientset, namespace)
+		panic(errP)
+	}
+	var num = len(podvect.Items)
+	fmt.Printf("Wait for pod creation.. %d\n", num)
+	for num < numberReplicas {
+		podvect, errP = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=mycurl"})
+		num = len(podvect.Items)
 		if errP != nil {
 			utils.DeleteNS(clientset, namespace)
 			panic(errP)
 		}
-		var num = len(podvect.Items)
-		fmt.Printf("Wait for pod creation.. %d\n", num)
-		for num < numberReplicas {
-			podvect, errP = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=mycurl"})
-			num = len(podvect.Items)
-			if errP != nil {
-				utils.DeleteNS(clientset, namespace)
-				panic(errP)
-			}
-			fmt.Print(".")
-		}
-		fmt.Printf("There are %d pods in the cluster\n", len(podvect.Items))
+		fmt.Print(".")
+	}
+	fmt.Printf("There are %d pods in the cluster\n", len(podvect.Items))
 
-		lungh := len(podvect.Items)
-		for i := 0; i < lungh; i++ {
-			pod := podvect.Items[i]
-			ctl := 0
-			for ctl != 1 {
-				switch pod.Status.Phase {
-				case apiv1.PodRunning:
-					{
-						ctl = 1
-						fmt.Printf("\n pod %s è Running %d \n", pod.GetName(), i)
-						break
-					}
-				case apiv1.PodPending:
-					{
-						podvect, errP = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=mycurl"})
-						lungh = len(podvect.Items)
-						if errP != nil {
-							utils.DeleteNS(clientset, namespace)
-							panic(errP)
-						}
-						pod = podvect.Items[i]
-					}
-				case apiv1.PodFailed, apiv1.PodSucceeded:
-					{
+	lungh := len(podvect.Items)
+	for i := 0; i < lungh; i++ {
+		pod := podvect.Items[i]
+		ctl := 0
+		for ctl != 1 {
+			switch pod.Status.Phase {
+			case apiv1.PodRunning:
+				{
+					ctl = 1
+					fmt.Printf("\n pod %s è Running %d \n", pod.GetName(), i)
+					break
+				}
+			case apiv1.PodPending:
+				{
+					podvect, errP = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=mycurl"})
+					lungh = len(podvect.Items)
+					if errP != nil {
 						utils.DeleteNS(clientset, namespace)
-						panic("error in pod creation")
+						panic(errP)
 					}
+					pod = podvect.Items[i]
+				}
+			case apiv1.PodFailed, apiv1.PodSucceeded:
+				{
+					utils.DeleteNS(clientset, namespace)
+					panic("error in pod creation")
 				}
 			}
 		}
+	}
+	redo := true
+	for redo {
 		fmt.Printf("tutti i deployment dovrebbero essere running")
 		fmt.Println(time.Now())
-		command := "curl http://" + svcCr.Spec.ClusterIP + ":8080 -o dev/null -w \"TTFB: %{time_starttransfer} \" >> file.txt;cat file.txt"
+		command := "for i in 0 1 2 3 4 5 ; do curl http://" + svcCr.Spec.ClusterIP + ":8080 -o dev/null -w \"TTFB: %{time_starttransfer} \" >> file.txt; done ;cat file.txt"
 		jobsClient := clientset.BatchV1().Jobs(namespace)
 		job := &batchv1.Job{
 			ObjectMeta: metav1.ObjectMeta{
@@ -194,8 +186,15 @@ func SpeedMovingFileandLatency(clientset *kubernetes.Clientset, numberReplicas i
 						panic(errBuf)
 					}
 					str = buf.String()
+					if strings.Contains(str, " Failed to connect ") {
+						redo = true
+						fmt.Printf("Errore di connessione al svc")
+						utils.CleanCluster(clientset, namespace, "", "curlclient", "", job.GetName(), podC.GetName())
+						continue
+					} else {
+						redo = false
+					}
 					fileoutput.WriteString(str)
-					fileoutput.WriteString("\n")
 					ctl = 1
 					break
 				}
@@ -207,36 +206,63 @@ func SpeedMovingFileandLatency(clientset *kubernetes.Clientset, numberReplicas i
 
 			}
 		}
+		netSpeeds, netLatency = calculateResults(str, clientset, namespace)
+		utils.CleanCluster(clientset, namespace, "app=mycurl", "curlclient", dep.GetName(), job.GetName(), podC.GetName())
+	}
 
-		if strings.Contains(str, " Failed to connect ") {
-			i--
-			fmt.Printf("Errore di connessione al svc")
-			utils.CleanCluster(clientset, namespace, "app=mycurl", "curlclient", dep.GetName(), job.GetName(), podC.GetName())
-			continue
-		}
-		vectString := strings.Split(str, "\n")
-		latencyString := strings.Split(vectString[len(vectString)-1], ":")[len(strings.Split(vectString[len(vectString)-1], ":"))-1]
-		latencyString = strings.ReplaceAll(latencyString, " ", "")
-		netLatency[i], errLatencyConv = strconv.ParseFloat(latencyString, 64)
+	if servicesNumber > 1 {
+		utils.DeleteBulk(servicesNumber, servicesNumber, clientset, namespace)
+	}
 
-		if netLatency[i] > maxLatency {
-			fmt.Printf("\naggiorno massima latenza all'%d con %f\n", i, netLatency[i])
-			maxPosLat = i
-			maxLatency = netLatency[i]
+	utils.DeleteNS(clientset, namespace)
+	return speedAVG(netSpeeds, netLatency)
+}
+
+func calculateResults(str string, clientset *kubernetes.Clientset, namespace string) ([]float64, []float64) {
+	var maxPos = -1
+	var minPos = -1
+	var maxPosLat = -1
+	var minPosLat = -1
+	var maxSpeed = -10.0
+	var minSpeed = 10000.0
+	var maxLatency = -10.0
+	var minLatency = 10000.0
+	var errLatencyConv error
+	netSpeeds := make([]float64, iteration)
+	netLatency := make([]float64, iteration)
+
+	subLatency := strings.Split(str, "TTFB: ")
+	for i := 1; i < len(subLatency); i++ {
+
+		//latencyString := strings.Split(subLatency[len(subLatency)-1], ":")[len(strings.Split(subLatency[len(subLatency)-1], ":"))-1]
+		subLatency[i] = strings.ReplaceAll(subLatency[i], " ", "")
+		netLatency[i-1], errLatencyConv = strconv.ParseFloat(subLatency[i], 64)
+
+		if netLatency[i-1] > maxLatency {
+			fmt.Printf("\naggiorno massima latenza all'%d con %f\n", i-1, netLatency[i-1])
+			maxPosLat = i - 1
+			maxLatency = netLatency[i-1]
 		}
-		if netLatency[i] <= minLatency {
-			fmt.Printf("\naggiorno minima latenza all'%d con %f\n", i, netLatency[i])
-			minPosLat = i
-			minLatency = netLatency[i]
+		if netLatency[i-1] <= minLatency {
+			fmt.Printf("\naggiorno minima latenza all'%d con %f\n", i-1, netLatency[i-1])
+			minPosLat = i - 1
+			minLatency = netLatency[i-1]
 		}
 
-		fmt.Printf("\n%f latenza\n", netLatency[i])
+		fmt.Printf("\n%f latenza\n", netLatency[i-1])
 		if errLatencyConv != nil {
 			fmt.Println("Errore nel speed conversion line 216")
 			utils.DeleteNS(clientset, namespace)
 			panic(errLatencyConv)
 		}
-		vectString = strings.Split(vectString[len(vectString)-2], " 0 ")
+	}
+
+	substring := strings.Split(subLatency[0], "  % Total ")
+	for i := 1; i < len(substring); i++ {
+		fmt.Printf("\n valori attuali: %f %f %f %f\n", minSpeed, minLatency, maxSpeed, maxLatency)
+		vectString := strings.Split(substring[i], "\r")
+
+		vectString = strings.Split(vectString[len(vectString)-1], " 0 ")
 		vectString[len(vectString)-2] = strings.ReplaceAll(vectString[len(vectString)-2], " ", "")
 		fmt.Printf("%s\n", vectString[len(vectString)-2])
 		switch vectString[len(vectString)-2][len(vectString[len(vectString)-2])-1] {
@@ -253,14 +279,14 @@ func SpeedMovingFileandLatency(clientset *kubernetes.Clientset, numberReplicas i
 				if speed > maxSpeed {
 					fmt.Printf("\naggiorno massima speed all'%d con %f\n", i, speed)
 					maxSpeed = speed
-					maxPos = i
+					maxPos = i - 1
 				}
 				if speed <= minSpeed {
 					fmt.Printf("\naggiorno min speed all'%d con %f\n", i, speed)
 					minSpeed = speed
-					minPos = i
+					minPos = i - 1
 				}
-				netSpeeds[i] = speed
+				netSpeeds[i-1] = speed
 			}
 		case 'K':
 			{
@@ -274,13 +300,13 @@ func SpeedMovingFileandLatency(clientset *kubernetes.Clientset, numberReplicas i
 				speed = speed / 1000000
 				if speed > maxSpeed {
 					maxSpeed = speed
-					maxPos = i
+					maxPos = i - 1
 				}
 				if speed <= minSpeed {
 					minSpeed = speed
-					minPos = i
+					minPos = i - 1
 				}
-				netSpeeds[i] = speed
+				netSpeeds[i-1] = speed
 			}
 		case 'G':
 			{
@@ -293,19 +319,18 @@ func SpeedMovingFileandLatency(clientset *kubernetes.Clientset, numberReplicas i
 				}
 				if speed > maxSpeed {
 					maxSpeed = speed
-					maxPos = i
+					maxPos = i - 1
 				}
 				if speed <= minSpeed {
 					minSpeed = speed
-					minPos = i
+					minPos = i - 1
 				}
-				netSpeeds[i] = speed
+				netSpeeds[i-1] = speed
 			}
 
 		}
-
-		utils.CleanCluster(clientset, namespace, "app=mycurl", "curlclient", dep.GetName(), job.GetName(), podC.GetName())
 	}
+
 	fmt.Printf("\n %d max pos: %f\n", maxPos, netSpeeds[maxPos])
 	netSpeeds[maxPos] = 0.0
 	fmt.Println("\nSono arrivato qui e mi blocco maxLAtency")
@@ -316,13 +341,7 @@ func SpeedMovingFileandLatency(clientset *kubernetes.Clientset, numberReplicas i
 	fmt.Println("\nSono arrivato qui e mi blocco minLAtency")
 	fmt.Printf("%d:%f min \n", minPosLat, netLatency[minPosLat])
 	netLatency[minPosLat] = 0.0
-
-	if servicesNumber > 1 {
-		utils.DeleteBulk(servicesNumber, servicesNumber, clientset, namespace)
-	}
-
-	utils.DeleteNS(clientset, namespace)
-	return speedAVG(netSpeeds, netLatency)
+	return netSpeeds, netLatency
 }
 
 func speedAVG(speeds []float64, latencies []float64) string {
@@ -333,9 +352,9 @@ func speedAVG(speeds []float64, latencies []float64) string {
 		sumSpeed = sumSpeed + speeds[i]
 		sumLatency = sumLatency + latencies[i]
 	}
-	iteration = iteration - 2
-	speed := fmt.Sprintf("%f", sumSpeed/float64(iteration))
-	latency := fmt.Sprintf("%f", sumLatency/float64(iteration))
+	div := iteration - 2
+	speed := fmt.Sprintf("%f", sumSpeed/float64(div))
+	latency := fmt.Sprintf("%f", sumLatency/float64(div))
 	return speed + " and latency is: " + latency
 }
 
