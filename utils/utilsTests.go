@@ -127,11 +127,12 @@ func CreateBulk(numberServices int, numberPods int, clientset *kubernetes.Client
 		createPodsFake(i, clientset, ns)
 	}
 
-	podfakeVect, err := clientset.CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{})
+	podfakeVect, err := clientset.CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{FieldSelector: "spec.Status=Running"})
 	if err != nil {
 		DeleteNS(clientset, ns)
 		panic(err)
 	}
+	fmt.Printf("numero di pods è %d < %d\n", len(podfakeVect.Items), numberPods)
 	for len(podfakeVect.Items) < numberPods {
 		podfakeVect, err = clientset.CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{})
 	}
