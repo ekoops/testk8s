@@ -127,7 +127,7 @@ func CreateBulk(numberServices int, numberPods int, clientset *kubernetes.Client
 		createPodsFake(i, clientset, ns)
 	}
 
-	podfakeVect, err := clientset.CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{FieldSelector: "spec.Status=Running"})
+	podfakeVect, err := clientset.CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{FieldSelector: "status.phase=Running"})
 	if err != nil {
 		DeleteNS(clientset, ns)
 		panic(err)
