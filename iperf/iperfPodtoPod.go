@@ -452,7 +452,7 @@ func parseVel(strs string, clientset *kubernetes.Clientset, ns string) ([]float6
 	clientCPU = make([]float64, 3)
 	serverCPU = make([]float64, 3)
 	var errConv error
-	str := strings.Split(strs, "iperf 3.0.7\n")
+	str := strings.Split(strs, "iperf Done.\n")
 	for i := 0; i < 3; i++ {
 		if strings.Contains(strs, "Connection timed out") || strings.Contains(str[i+1], "Connection refused") || strings.Contains(str[i+1], "Connection timed out") {
 			utils.DeleteNS(clientset, ns)

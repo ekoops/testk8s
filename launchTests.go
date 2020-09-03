@@ -239,7 +239,7 @@ func main() {
 		for j := 0; j < 3; j++ {
 			output = curl.SpeedMovingFileandLatency(clientset, netPolRep[i], 1, fileoutput, netPolServices[j])
 			fmt.Printf("\n%s\n Network speed and latency with a growing number of services and endpoints: %s\n%s\n", stars, output, stars)
-			fileoutput.WriteString("\n" + stars + "\n" + "Network speed and latency with a growing number of services " + strconv.Itoa(netPolServices[i]) + " and endpoints " + strconv.Itoa(netPolRep[i]) + " : " + output + "\n" + stars + "\n")
+			fileoutput.WriteString("\n" + stars + "\n" + "Network speed and latency with a growing number of services " + strconv.Itoa(netPolServices[j]) + " and endpoints " + strconv.Itoa(netPolRep[i]) + " : " + output + "\n" + stars + "\n")
 		}
 	}
 
