@@ -458,7 +458,7 @@ func parseVel(strs string, clientset *kubernetes.Clientset, ns string) ([]float6
 			utils.DeleteNS(clientset, ns)
 			panic("error in client server communication")
 		} else {
-			vectString := strings.Split(str[i+1], "0.00-10.00 ")
+			vectString := strings.Split(str[i], "0.00-10.00 ")
 			substringSpeed := strings.Split(vectString[1], "/sec")
 			vectString[len(vectString)-1] = strings.Replace(vectString[len(vectString)-1], "%", "0", 5)
 			substringCPU := strings.Split(vectString[len(vectString)-1], "(")
