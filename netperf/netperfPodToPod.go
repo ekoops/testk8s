@@ -8,6 +8,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -26,15 +27,10 @@ var namespaceUDP = "testnetperfudp"
 var iteration = 5
 var node = " "
 var node2 = "node2"
-
-/*var netSpeeds []float64
-var confidenceArray []float64
-var confidenceArrayCpuC []float64
-var confidenceArrayCpuS []float64
-var cpuC []float64
-var cpuS []float64
-*/
-
+var namePol string
+var labelServer = "netperfserver"
+var labelClient = "netperfclient"
+var networkPolicies *v1.NetworkPolicy
 var netSpeeds float64
 var confidenceArray float64
 var confidenceArrayCpuC float64
@@ -48,6 +44,10 @@ func NetperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *
 	nsCR := utils.CreateNS(clientset, namespace)
 	fmt.Printf("Namespace %s created\n", nsCR.Name)
 	best := "10000.0"
+	if netpol {
+		utils.CreateBulk(0, numNetPol, clientset, namespace)
+		namePol = utils.CreateAllNetPol(clientset, numNetPol, namespace, labelServer, labelClient)
+	}
 	//create one deployment of netperf server
 	/*
 		netSpeeds := make([]float64, iteration)
@@ -229,6 +229,11 @@ func NetperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *
 
 		utils.CleanCluster(clientset, namespace, "app=netperfserver", "app=netperfclient", deplName, jobName, pod.Name)
 	}
+	if netpol {
+		utils.DeleteAllPolicies(clientset, namespace, namePol)
+		utils.DeleteBulk(0, numNetPol, clientset, namespace)
+	}
+
 	utils.DeleteNS(clientset, namespace)
 	netSpeeds, confidenceArray, cpuC, cpuS, confidenceArrayCpuC, confidenceArrayCpuS = calculateSpeed(best, clientset, namespace, 0)
 	//avgSp, avgClient, avgServer, CpuPercCl, CpuPercS := utils.AvgSpeed(netSpeeds, cpuC, cpuS, confidenceArrayCpuC, confidenceArrayCpuS, float64(iteration))
@@ -242,6 +247,12 @@ func NetperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *
 	best := "10000.0"
 	nsCR := utils.CreateNS(clientset, namespaceUDP)
 	fmt.Printf("Namespace UDP %s created\n", nsCR.Name)
+
+	if netpol {
+		utils.CreateBulk(0, numNetPol, clientset, namespaceUDP)
+		namePol = utils.CreateAllNetPol(clientset, numNetPol, namespaceUDP, labelServer, labelClient)
+	}
+
 	/*
 		netSpeeds := make([]float64, iteration)
 		confidenceArray := make([]float64, iteration)
@@ -420,6 +431,11 @@ func NetperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *
 		//todo vedere cosa succede con float 32, per ora 64
 		utils.CleanCluster(clientset, namespaceUDP, "app=netperfserver", "app=netperfclient", deplName, jobName, pod.Name)
 	}
+	if netpol {
+		utils.DeleteAllPolicies(clientset, namespaceUDP, namePol)
+		utils.DeleteBulk(0, numNetPol, clientset, namespaceUDP)
+	}
+
 	utils.DeleteNS(clientset, namespaceUDP)
 	/*avgSp, avgClient, avgServer, CpuPercCl, CpuPercS := utils.AvgSpeed(netSpeeds, cpuC, cpuS, confidenceArrayCpuC, confidenceArrayCpuS, float64(iteration))
 	return fmt.Sprintf("%f", avgSp) + " Gbits/sec, confidence avg" + fmt.Sprintf("%f", confidenceAVG(netSpeeds, confidenceArray, float64(iteration))) + " and cpu client/server usage : " + fmt.Sprintf("%f", avgClient) + ":" + fmt.Sprintf("%f", CpuPercCl) + " / " + fmt.Sprintf("%f", avgServer) + ":" + fmt.Sprintf("%f", CpuPercS)
