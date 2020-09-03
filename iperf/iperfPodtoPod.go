@@ -51,6 +51,7 @@ func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *os
 
 	if netpol {
 		utils.CreateBulk(0, numNetPol, clientset, namespace)
+		namePol = utils.CreateAllNetPol(clientset, numNetPol, namespace, labelServer, labelClient)
 	}
 	//create one deployment of iperf server
 	//todo vedere come poter velocizzare con nomi diversi per deployment etc (tipo random string per ogni deployment
@@ -121,10 +122,6 @@ func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *os
 			podIP := podI.Status.PodIP
 			fmt.Printf("Server IP: %s\n", podIP)
 
-		}
-
-		if netpol {
-			namePol = utils.CreateAllNetPol(clientset, numNetPol, namespace, labelServer, labelClient)
 		}
 
 		command := "for i in 0 1 2; do iperf3 -c " + podI.Status.PodIP + " -p 5002 -V -N -t 10 -Z -A 1,2 -M 1448 >> file.txt; sleep 11; done; cat file.txt"
@@ -234,12 +231,11 @@ func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *os
 		//Clean the cluster
 
 		utils.CleanCluster(clientset, namespace, "app=iperfserver", "app=iperfclient", deplName, jobName, pod.Name)
-		if netpol {
-			utils.DeleteAllPolicies(clientset, namespace, namePol)
-		}
+
 	}
 
 	if netpol {
+		utils.DeleteAllPolicies(clientset, namespace, namePol)
 		utils.DeleteBulk(0, numNetPol, clientset, namespace)
 	}
 
@@ -263,6 +259,11 @@ func IperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *os
 	cpuClie := make([]float64, iteration)
 	cpuconfC := make([]float64, iteration)
 	cpuconfS := make([]float64, iteration)
+
+	if netpol {
+		utils.CreateBulk(0, numNetPol, clientset, namespaceUDP)
+		namePol = utils.CreateAllNetPol(clientset, numNetPol, namespaceUDP, labelServer, labelClient)
+	}
 
 	//create one deployment of iperf server UDP
 	part := 0
@@ -438,6 +439,11 @@ func IperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *os
 			part++
 		}
 		utils.CleanCluster(clientset, namespaceUDP, "app=iperfserver", "app=iperfclient", deplName, jobName, pod.Name)
+	}
+
+	if netpol {
+		utils.DeleteAllPolicies(clientset, namespaceUDP, namePol)
+		utils.DeleteBulk(0, numNetPol, clientset, namespaceUDP)
 	}
 
 	utils.DeleteNS(clientset, namespaceUDP)

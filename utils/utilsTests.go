@@ -175,10 +175,8 @@ func CreateAllNetPol(clientset *kubernetes.Clientset, netpolNumber int, namespac
 		label := "casualserver" + strconv.Itoa(i)
 		networkPolicies = createNetPol(clientset, namespace, 2, labelServer, label, netPolName+"-server")
 		namePol = namePol + " " + networkPolicies.GetName()
-		fmt.Printf("Created NetPol %s\n", networkPolicies.GetName())
 		networkPolicies = createNetPol(clientset, namespace, 2, labelClient, label, netPolName+"-client")
 		namePol = namePol + " " + networkPolicies.GetName()
-		fmt.Printf("Created NetPol %s\n", networkPolicies.GetName())
 	}
 
 	return namePol
