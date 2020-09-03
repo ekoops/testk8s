@@ -134,12 +134,13 @@ func CreateBulk(numberServices int, numberPods int, clientset *kubernetes.Client
 	}
 	fmt.Printf("numero di pods è %d < %d\n", len(podfakeVect.Items), numberPods)
 	for len(podfakeVect.Items) < numberPods {
-		podfakeVect, err = clientset.CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{})
+		podfakeVect, err = clientset.CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{FieldSelector: "status.phase=Running"})
 	}
 
 }
 
 func DeleteBulk(numberServices int, numberPods int, clientset *kubernetes.Clientset, ns string) {
+	fmt.Printf("fake pods will be deleted now")
 	for i := 0; i < numberServices; i++ {
 		nameService := "randomservice" + strconv.Itoa(i)
 		clientset.CoreV1().Services(ns).Delete(context.TODO(), nameService, metav1.DeleteOptions{})
