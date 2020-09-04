@@ -71,13 +71,13 @@ func NetperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *
 			panic(errD.Error())
 		}
 
-		podvect, errP := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+		podvect, errP := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=netperfserver"})
 		if errP != nil {
 			panic(errP)
 		}
 		fmt.Print("Wait for pod creation..")
 		for {
-			podvect, errP = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+			podvect, errP = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=netperfserver"})
 			if errP != nil {
 				panic(errP)
 			}
@@ -100,7 +100,7 @@ func NetperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *
 				}
 			case apiv1.PodPending:
 				{
-					podvect, errP = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+					podvect, errP = clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=netperfserver"})
 					if errP != nil {
 						panic(errP)
 					}
@@ -123,7 +123,7 @@ func NetperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *
 			podIP := podI.Status.PodIP
 			fmt.Printf("Server IP: %s\n", podIP)
 
-		} //2 3 4
+		}
 		command := "netperf -H " + podI.Status.PodIP + " -T 1,2 -i 30,2 -j -p 15001 -c -C -- -D > file.txt; cat file.txt "
 		fmt.Println("Creating Netperf Client: " + command)
 		jobsClient := clientset.BatchV1().Jobs(namespace)
@@ -274,13 +274,13 @@ func NetperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *
 			panic(errD.Error())
 		}
 
-		podvect, errP := clientset.CoreV1().Pods(namespaceUDP).List(context.TODO(), metav1.ListOptions{})
+		podvect, errP := clientset.CoreV1().Pods(namespaceUDP).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=netperfserver"})
 		if errP != nil {
 			panic(errP)
 		}
 		fmt.Print("Wait for pod creation..")
 		for {
-			podvect, errP = clientset.CoreV1().Pods(namespaceUDP).List(context.TODO(), metav1.ListOptions{})
+			podvect, errP = clientset.CoreV1().Pods(namespaceUDP).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=netperfserver"})
 			if errP != nil {
 				panic(errP)
 			}
@@ -303,7 +303,7 @@ func NetperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *
 				}
 			case apiv1.PodPending:
 				{
-					podvect, errP = clientset.CoreV1().Pods(namespaceUDP).List(context.TODO(), metav1.ListOptions{})
+					podvect, errP = clientset.CoreV1().Pods(namespaceUDP).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=netperfserver"})
 					if errP != nil {
 						panic(errP)
 					}
