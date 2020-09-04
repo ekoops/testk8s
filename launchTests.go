@@ -271,17 +271,26 @@ func main() {
 	numberNet := 1000
 	fmt.Println("Network Policies Part")
 	for i := 0; i < 1; i++ {
+
+		output = iperf.IperfTCPPodtoPod(clientset, 1, fileoutput, true, numberNet)
+		fmt.Printf("\n%s\navg speed of the network Iperf3 TCP: %s\n %s\n", stars, output, stars)
+		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of the network Iperf3 TCP: " + output + "\n" + stars + "\n")
+
+		output = iperf.IperfTCPPodtoPod(clientset, 2, fileoutput, true, numberNet)
+		fmt.Printf("\n%s\navg speed of the network Iperf3 TCP: %s\n %s\n", stars, output, stars)
+		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of the network Iperf3 TCP: " + output + "\n" + stars + "\n")
+
 		output = iperf.IperfUDPPodtoPod(clientset, 1, fileoutput, true, numberNet)
+		fmt.Printf("\n%s\navg speed of the network Iperf3 UDP: %s\n %s\n", stars, output, stars)
+		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of the network Iperf3 UDP: " + output + "\n" + stars + "\n")
+
+		output = iperf.IperfUDPPodtoPod(clientset, 2, fileoutput, true, numberNet)
 		fmt.Printf("\n%s\navg speed of the network Iperf3 UDP: %s\n %s\n", stars, output, stars)
 		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of the network Iperf3 UDP: " + output + "\n" + stars + "\n")
 
 		output = netperf.NetperfTCPPodtoPod(clientset, 1, fileoutput, true, numberNet)
 		fmt.Printf("\n%s\navg speed of the network Netperf TCP: %s\n %s\n", stars, output, stars)
 		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of the network Netperf TCP: " + output + "\n" + stars + "\n")
-
-		output = iperf.IperfTCPPodtoPod(clientset, 1, fileoutput, true, numberNet)
-		fmt.Printf("\n%s\navg speed of the network Iperf3 TCP: %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of the network Iperf3 TCP: " + output + "\n" + stars + "\n")
 
 		fileoutput.WriteString(time.Now().String())
 
