@@ -17,7 +17,6 @@ import (
 	"strconv"
 	"strings"
 	"testk8s/utils"
-	"time"
 )
 
 var deplName = "serveriperf3"
@@ -241,7 +240,6 @@ func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *os
 
 	utils.DeleteNS(clientset, namespace)
 	fmt.Printf("Test Namespace: %s deleted\n", namespace)
-	time.Sleep(10 * time.Second)
 	avgS, avgCPUC, avgCPUS, _, _ := utils.AvgSpeed(netSpeeds, cpuClie, cpuServ, cpuconfC, cpuconfS, float64(iteration))
 	return fmt.Sprintf("%f", avgS) + " Gbits/sec, client cpu usage: " + fmt.Sprintf("%f", avgCPUC) + " and server CPU usage: " + fmt.Sprintf("%f", avgCPUS)
 
@@ -281,13 +279,10 @@ func IperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *os
 			panic(errD.Error())
 		}
 
-		podvect, errP := clientset.CoreV1().Pods(namespaceUDP).List(context.TODO(), metav1.ListOptions{})
-		if errP != nil {
-			panic(errP)
-		}
+		podvect, errP := clientset.CoreV1().Pods(namespaceUDP).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=iperfserver"})
 		fmt.Print("Wait for pod creation..")
 		for {
-			podvect, errP = clientset.CoreV1().Pods(namespaceUDP).List(context.TODO(), metav1.ListOptions{})
+			podvect, errP = clientset.CoreV1().Pods(namespaceUDP).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=iperfserver"})
 			if errP != nil {
 				panic(errP)
 			}
@@ -310,7 +305,7 @@ func IperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *os
 				}
 			case apiv1.PodPending:
 				{
-					podvect, errP = clientset.CoreV1().Pods(namespaceUDP).List(context.TODO(), metav1.ListOptions{})
+					podvect, errP = clientset.CoreV1().Pods(namespaceUDP).List(context.TODO(), metav1.ListOptions{LabelSelector: "app=iperfserver"})
 					if errP != nil {
 						panic(errP)
 					}
@@ -447,7 +442,7 @@ func IperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *os
 	}
 
 	utils.DeleteNS(clientset, namespaceUDP)
-	time.Sleep(10 * time.Second)
+
 	avgS, avgCPUC, avgCPUS, _, _ := utils.AvgSpeed(netSpeeds, cpuClie, cpuServ, cpuconfC, cpuconfS, float64(iteration))
 	return fmt.Sprintf("%f", avgS) + " Gbits/sec, client cpu usage: " + fmt.Sprintf("%f", avgCPUC) + " and server CPU usage: " + fmt.Sprintf("%f", avgCPUS)
 }
@@ -466,7 +461,7 @@ func parseVel(strs string, clientset *kubernetes.Clientset, ns string) ([]float6
 		} else {
 			vectString := strings.Split(str[i], "0.00-10.00 ")
 			substringSpeed := strings.Split(vectString[1], "/sec")
-			vectString[len(vectString)-1] = strings.Replace(vectString[len(vectString)-1], "%", "0", 5)
+			vectString[len(vectString)-1] = strings.Replace(vectString[len(vectString)-1], "%", "0", 10)
 			substringCPU := strings.Split(vectString[len(vectString)-1], "(")
 			speedPos := strings.Split(substringSpeed[0], " ")
 			speed := speedPos[len(speedPos)-2]
@@ -478,6 +473,7 @@ func parseVel(strs string, clientset *kubernetes.Clientset, ns string) ([]float6
 			clientCPU[i], errConv = strconv.ParseFloat(cpuSend[len(cpuSend)-2], 64)
 			if errConv != nil {
 				fmt.Println("Errore nel client conversion cpu + " + cpuSend[len(cpuSend)-2])
+				utils.DeleteNS(clientset, namespaceUDP)
 				panic(errConv)
 			}
 			serverCPU[i], errConv = strconv.ParseFloat(cpuServ[len(cpuServ)-2], 64)
