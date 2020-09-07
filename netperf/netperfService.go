@@ -17,7 +17,7 @@ import (
 	"testk8s/utils"
 )
 
-func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool, fileoutput *os.File, numberServices int) string {
+func TCPservice(clientset *kubernetes.Clientset, casus bool, multiple bool, fileoutput *os.File, numberServices int) string {
 
 	node = utils.SetNodeSelector(casus)
 	svcCr := initializeTCPService(multiple, clientset, namespace, "netperfserver", numberServices)

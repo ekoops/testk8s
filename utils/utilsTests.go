@@ -14,9 +14,9 @@ import (
 	"strings"
 )
 
-func SetNodeSelector(casus int) string {
+func SetNodeSelector(casus bool) string {
 	var node string
-	if casus == 1 {
+	if casus {
 		node = "node1"
 	} else {
 		node = "node2"

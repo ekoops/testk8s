@@ -38,7 +38,7 @@ var confidenceArrayCpuS float64
 var cpuC float64
 var cpuS float64
 
-func NetperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *os.File, netpol bool, numNetPol int) string {
+func NetperfTCPPodtoPod(clientset *kubernetes.Clientset, casus bool, fileoutput *os.File, netpol bool, numNetPol int) string {
 
 	node = utils.SetNodeSelector(casus)
 	nsCR := utils.CreateNS(clientset, namespace)
@@ -241,7 +241,7 @@ func NetperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *
 	return fmt.Sprintf("%f", netSpeeds) + " Gbits/sec, confidence avg: " + fmt.Sprintf("%f", confidenceArray) + " and cpu client usage : " + fmt.Sprintf("%f", cpuC) + "error: " + fmt.Sprintf("%f", confidenceArrayCpuC) + "/server: " + fmt.Sprintf("%f", cpuS) + ":" + fmt.Sprintf("%f", confidenceArrayCpuS)
 }
 
-func NetperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *os.File, netpol bool, numNetPol int) string {
+func NetperfUDPPodtoPod(clientset *kubernetes.Clientset, casus bool, fileoutput *os.File, netpol bool, numNetPol int) string {
 
 	node = utils.SetNodeSelector(casus)
 	best := "10000.0"
