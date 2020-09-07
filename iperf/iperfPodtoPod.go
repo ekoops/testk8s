@@ -37,7 +37,7 @@ var cpuconfC []float64
 var cpuClie []float64
 var cpuconfS []float64
 
-func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *os.File, netpol bool, numNetPol int) string {
+func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus bool, fileoutput *os.File, netpol bool, numNetPol int) string {
 
 	node = utils.SetNodeSelector(casus)
 	nsSpec := utils.CreateNS(clientset, namespace)
@@ -245,7 +245,7 @@ func IperfTCPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *os
 
 }
 
-func IperfUDPPodtoPod(clientset *kubernetes.Clientset, casus int, fileoutput *os.File, netpol bool, numNetPol int) string {
+func IperfUDPPodtoPod(clientset *kubernetes.Clientset, casus bool, fileoutput *os.File, netpol bool, numNetPol int) string {
 
 	node = utils.SetNodeSelector(casus)
 	utils.CreateNS(clientset, namespaceUDP)
@@ -459,7 +459,7 @@ func parseVel(strs string, clientset *kubernetes.Clientset, ns string) ([]float6
 			utils.DeleteNS(clientset, ns)
 			panic("error in client server communication")
 		} else {
-			vectString := strings.Split(str[i], "0.00-10.00 ")
+			vectString := strings.Split(str[i], "0.00-10.0")
 			substringSpeed := strings.Split(vectString[1], "/sec")
 			vectString[len(vectString)-1] = strings.Replace(vectString[len(vectString)-1], "%", "0", 10)
 			substringCPU := strings.Split(vectString[len(vectString)-1], "(")

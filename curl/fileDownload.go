@@ -23,11 +23,11 @@ var node = ""
 var node2 = "node2"
 var iteration = 6
 
-func SpeedMovingFileandLatency(clientset *kubernetes.Clientset, numberReplicas int, casus int, fileoutput *os.File, servicesNumber int) string {
+func SpeedMovingFileandLatency(clientset *kubernetes.Clientset, numberReplicas int, casus bool, fileoutput *os.File, servicesNumber int) string {
 
 	node = utils.SetNodeSelector(casus)
 
-	namespace := "namespacecurl" + strconv.Itoa(casus)
+	namespace := "namespacecurl" + strconv.Itoa(numberReplicas)
 	ns := utils.CreateNS(clientset, namespace)
 	netSpeeds := make([]float64, iteration)
 	netLatency := make([]float64, iteration)

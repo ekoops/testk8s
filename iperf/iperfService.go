@@ -22,7 +22,7 @@ var nameService = "my-service-iperf"
 var namespaceUDP = "testiperfudp"
 var imageServiceUDP = "leannet/k8s-netperf:latest"
 
-func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool, fileoutput *os.File, numberServices int) string {
+func TCPservice(clientset *kubernetes.Clientset, casus bool, multiple bool, fileoutput *os.File, numberServices int) string {
 
 	node = utils.SetNodeSelector(casus)
 	nsCR := utils.CreateNS(clientset, namespace)
@@ -225,7 +225,7 @@ func TCPservice(clientset *kubernetes.Clientset, casus int, multiple bool, fileo
 
 }
 
-func UDPservice(clientset *kubernetes.Clientset, casus int, multiple bool, fileoutput *os.File, numberServices int) string {
+func UDPservice(clientset *kubernetes.Clientset, casus bool, multiple bool, fileoutput *os.File, numberServices int) string {
 
 	node = utils.SetNodeSelector(casus)
 	nsCR := utils.CreateNS(clientset, namespaceUDP)
