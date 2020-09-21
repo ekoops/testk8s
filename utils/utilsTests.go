@@ -182,6 +182,8 @@ func CreateAllNetPol(clientset *kubernetes.Clientset, netpolNumber int, namespac
 	return namePol
 }
 
+//type=virtual-node
+
 func createPodsFake(i int, clientset *kubernetes.Clientset, ns string) {
 	deplName := "randomdepl" + strconv.Itoa(i)
 	label := "casualserver" + strconv.Itoa(i)
@@ -214,6 +216,7 @@ func createPodsFake(i int, clientset *kubernetes.Clientset, ns string) {
 							Args:    []string{"-c", "tail -f /dev/null"},
 						},
 					},
+					NodeSelector: map[string]string{"type": "virtual-node"},
 				},
 			},
 		},
