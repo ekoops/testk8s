@@ -236,7 +236,7 @@ func main() {
 	*/
 	output := "ciao"
 	for i := 0; i < 4; i++ {
-		for j := 0; j < 3; j++ {
+		for j := 3; j < 4; j++ {
 			output = curl.SpeedMovingFileandLatency(clientset, netPolRep[i], true, fileoutput, netPolServices[j])
 			fmt.Printf("\n%s\n Network speed and latency with a growing number of services and endpoints: %s\n%s\n", stars, output, stars)
 			fileoutput.WriteString("\n" + stars + "\n" + "Network speed and latency with a growing number of services " + strconv.Itoa(netPolServices[j]) + " and endpoints " + strconv.Itoa(netPolRep[i]) + " : " + output + "\n" + stars + "\n")
@@ -246,7 +246,7 @@ func main() {
 	// parte aggiuntiva su test con molti pods nel cluster
 
 	multiple := true
-	numServ := 1000
+	numServ := 10000
 	for i := 0; i < 1; i++ {
 		output = iperf.TCPservice(clientset, true, multiple, fileoutput, numServ)
 		fmt.Printf("\n%s\navg speed of network Iperf3 TCP with service (%d service in the cluster): %s\n %s\n", stars, numServ, output, stars)
@@ -268,7 +268,7 @@ func main() {
 	}
 
 	//parte con netpol installate nel cluster
-	numberNet := 1000
+	numberNet := 10000
 	fmt.Println("Network Policies Part")
 	for i := 0; i < 1; i++ {
 
