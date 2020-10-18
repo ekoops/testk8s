@@ -8,7 +8,7 @@ Two main scenarios are taken into consideration, shown below in a schematic way:
 
 In both sets of tests, throughput and CPU usage for TCP and UDP protocols are computed for CNI installed, with the aid of Iperf3, Iperf2 and Netperf.
 
-In the former category pods are deployed in two different ways: in the first case two pods are created in different workers, in the other case two pods are deployed in the same worker (communication inter-node and intra-node). In addition, it is possible to run these tests with Network Policies installed in the cluster (the number of network policies installed is variable, now fixed to 1000 and 10000).
+In the former category pods are deployed in two different ways: in the first case two pods are created in different workers, in the other case two pods are deployed in the same worker (communication inter-node and intra-node). In addition, it is possible to run these tests with Network Policies installed in the cluster (the number of network policies installed is variable, now fixed to 2k and 20k).
 
 The latter category has similar scenarios (pod deployed in different and same nodes), but in this case PodClient contacts the service that redirect the traffic to PodServer. Several tests can be runned with a growing service number in the cluster (also the number of services is configurable, for now tests with 1,10,100,1000,10000 services are available) and a growing number of PodServer replica (for now 1,10,20,50,100).
 Due to problem with netperf and iperf, tests with PodServer replica > 1 are executed with curl tool (with different outputs).
