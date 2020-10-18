@@ -35,8 +35,5 @@ To run these tests:
             
                 1- clone this repo (git clone https://github.com/DavidLiffredo/testk8s.git)
                 2- cd testk8s
-                3- go build testk8s
-                4- go install testk8s
-                5- cd go/bin
-                6- ./testk8s
+                3- go run testk8s
 
