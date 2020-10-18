@@ -25,7 +25,7 @@ Some tests stress the installed plugin, creating a large number of resources (bo
 NB: PAY ATTENTION that an huge number of services implies a large number of pods created in the cluster, which must have enough nodes to host all pods created (1 svc created <-> 1 pod created linked to service).
 
 
-For now, all tests are executed sequentially. In the future filters to select specific test scenarios will be created.
+For now, all tests are executed sequentially and results are saved in a file on the host. In the future filters to select specific test scenarios will be created.
 
 To run these tests:
             
