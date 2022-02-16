@@ -4,324 +4,175 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"os"
 	"path/filepath"
-	"strconv"
-	"testk8s/curl"
 	"testk8s/iperf"
 	"testk8s/netperf"
 	"time"
 )
 
 var stars = "*****************************************************************\n"
-var labels [2]map[string]string
-var nodeptr *apiv1.Node
-var nodevect [2]apiv1.Node
+
+func addTypeLabel(cset *kubernetes.Clientset) error {
+	nodes, err := cset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+	for i := 0; i < len(nodes.Items); i++ {
+		nodes.Items[i].Labels["type"] = "node" + fmt.Sprintf("%d", i+1)
+		_, err := cset.CoreV1().Nodes().Update(context.TODO(), &nodes.Items[i], metav1.UpdateOptions{})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func removeTypeLabel(cset *kubernetes.Clientset) error {
+	nodes, err := cset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+	for i := 0; i < len(nodes.Items); i++ {
+		delete(nodes.Items[i].Labels, "type")
+		_, err = cset.CoreV1().Nodes().Update(context.TODO(), &nodes.Items[i], metav1.UpdateOptions{})
+		if err != nil {
+			return err
+		}
+
+	}
+	return nil
+}
+
+func printNow(f *os.File) {
+	now := time.Now().String()
+	fmt.Println(now)
+	f.WriteString(now)
+}
+
+func testPodToPod(cset *kubernetes.Clientset, diffNodes bool, f *os.File) {
+	printNow(f)
+
+	output := iperf.IperfTCPPodtoPod(cset, diffNodes, f, false, 0)
+	s := fmt.Sprintf("\n%s\navg speed of the network Iperf3 TCP (diff. nodes: %T): %s\n %s\n", stars, diffNodes, output, stars)
+	fmt.Print(s)
+	f.WriteString(s)
+
+	output = iperf.IperfUDPPodtoPod(cset, diffNodes, f, false, 0)
+	s = fmt.Sprintf("\n%s\navg speed of the network Iperf3 UDP (diff. nodes: %T): %s\n %s\n", stars, diffNodes, output, stars)
+	fmt.Print(s)
+	f.WriteString(s)
+
+	f.WriteString(time.Now().String())
+
+	output = netperf.NetperfTCPPodtoPod(cset, diffNodes, f, false, 0)
+	s = fmt.Sprintf("\n%s\navg speed of the network Netperf TCP (diff. nodes: %T): %s\n %s\n", stars, diffNodes, output, stars)
+	fmt.Print(s)
+	f.WriteString(s)
+
+	output = netperf.NetperfUDPPodtoPod(cset, diffNodes, f, false, 0)
+	s = fmt.Sprintf("\n%s\navg speed of the network Netperf UDP (diff. nodes: %T): %s\n %s\n", stars, diffNodes, output, stars)
+	fmt.Print(s)
+	f.WriteString(s)
+
+	printNow(f)
+}
+
+func testPodToSvc(cset *kubernetes.Clientset, diffNodes bool, multiple bool, svcNum int, f *os.File) {
+	printNow(f)
+
+	output := iperf.TCPservice(cset, diffNodes, multiple, f, svcNum)
+	s := fmt.Sprintf(
+		"\n%s\navg speed of network Iperf3 TCP with service (diff. nodes: %T; services in cluster: %d): %s\n %s\n",
+		stars, diffNodes, svcNum, output, stars,
+	)
+	fmt.Print(s)
+	f.WriteString(s)
+
+	output = iperf.UDPservice(cset, diffNodes, multiple, f, svcNum)
+	s = fmt.Sprintf(
+		"\n%s\navg speed of network Iperf3 UDP with service (diff. nodes: %T; services in cluster: %d): %s\n %s\n",
+		stars, diffNodes, svcNum, output, stars,
+	)
+	fmt.Print(s)
+	f.WriteString(s)
+
+	f.WriteString(time.Now().String())
+
+	output = netperf.TCPservice(cset, diffNodes, multiple, f, svcNum)
+	s = fmt.Sprintf(
+		"\n%s\navg speed of network Netperf TCP with service (diff. nodes: %T; services in cluster: %d): %s\n %s\n",
+		stars, diffNodes, svcNum, output, stars,
+	)
+	fmt.Print(s)
+	f.WriteString(s)
+
+	printNow(f)
+}
 
 func main() {
 	clientset := initialSetting()
-	netPolRep := [4]int{10, 20, 50, 100}
-	netPolServices := [4]int{1, 100, 1000, 10000}
-	//var nod [] v1.Node
-	nodes, errNodes := clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
-	if errNodes != nil {
-		fmt.Println(errNodes)
-		return
-	}
-	count := 1
-	var errLabel error
-	for i := 0; i < len(nodes.Items); i++ {
-		_, master := nodes.Items[i].Labels["node-role.kubernetes.io/master"]
-		_, agent := nodes.Items[i].Labels["type=virtual-node"]
-		if !master && !agent {
-			labels[count-1] = nodes.Items[i].GetLabels()
-			nodes.Items[i].Labels["type"] = "node" + fmt.Sprintf("%d", count)
-			//fmt.Println("label added ")
 
-			nodeptr, errLabel = clientset.CoreV1().Nodes().Update(context.TODO(), &nodes.Items[i], metav1.UpdateOptions{})
-			nodevect[count-1] = *nodeptr
-			if errLabel != nil {
-				fmt.Println(errLabel)
-				return
-			}
-			count++
-		}
-
-		if count == 3 {
-			break
-		}
+	if err := addTypeLabel(clientset); err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(1)
 	}
+
 	fileoutput, err := os.Create(fmt.Sprintf("%d", time.Now().Unix()))
 	if err != nil {
-		fmt.Println(err)
+		fmt.Fprint(os.Stderr, err.Error())
 		return
 	}
 
-	fmt.Println(time.Now())
-	fileoutput.WriteString(time.Now().String())
-	fmt.Println("-----------------------------------------------------------------")
-	fmt.Println("-----------------------------------------------------------------")
-	fmt.Printf("\n\n")
-	fileoutput.WriteString("\nPOD TO POD DIFFERENT NODES:\n")
+	now := time.Now().String()
+	fmt.Printf("%s\n-----------------------------------------------------------------\n\n\n", now)
 	fmt.Println("POD TO POD DIFFERENT NODES:")
-	/*
-		output := iperf.IperfTCPPodtoPod(clientset, true, fileoutput, false, 0)
-		fmt.Printf("\n%s\navg speed of the network Iperf3 TCP: %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of the network Iperf3 TCP: " + output + "\n" + stars + "\n")
+	fileoutput.WriteString(fmt.Sprintf("%s\nPOD TO POD DIFFERENT NODES:\n", now))
 
-		output = iperf.IperfUDPPodtoPod(clientset,  true, fileoutput, false, 0)
-		fmt.Printf("\n%s\navg speed of the network Iperf3 UDP: %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of the network Iperf3 UDP: " + output + "\n" + stars + "\n")
+	testPodToPod(clientset, true, fileoutput)
 
-		fileoutput.WriteString(time.Now().String())
+	testPodToSvc(clientset, true, false, 1, fileoutput)
 
-		output = netperf.NetperfTCPPodtoPod(clientset,  true, fileoutput, false, 0)
-		fmt.Printf("\n%s\navg speed of the network Netperf TCP: %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of the network Netperf TCP: " + output + "\n" + stars + "\n")
+	testPodToSvc(clientset, true, true, 10, fileoutput)
 
-		output = netperf.NetperfUDPPodtoPod(clientset,  true, fileoutput, false, 0)
-		fmt.Printf("\n%s\navg speed of the network Netperf UDP: %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of the network Netperf UDP: " + output + "\n" + stars + "\n")
+	now = time.Now().String()
+	fmt.Printf("%s\n-----------------------------------------------------------------\n\n\n", now)
+	fmt.Println("POD TO POD SAME NODE:")
+	fileoutput.WriteString(fmt.Sprintf("%s\nPOD TO POD SAME NODE:\n", now))
 
-		fileoutput.WriteString(time.Now().String())
+	testPodToPod(clientset, false, fileoutput)
 
-		fmt.Println(time.Now())
+	testPodToSvc(clientset, false, false, 1, fileoutput)
 
-		fileoutput.WriteString(time.Now().String())
+	testPodToSvc(clientset, false, true, 10, fileoutput)
 
-		output = iperf.TCPservice(clientset,  true, false, fileoutput, 1)
-		fmt.Printf("\n%s\navg speed of network Iperf3 TCP with service (1 service in the cluster): %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of network Iperf3 TCP with service (1 service in the cluster): " + output + "\n" + stars + "\n")
-
-		output = iperf.UDPservice(clientset,  true, false, fileoutput, 1)
-		fmt.Printf("\n%s\navg speed of network Iperf3 UDP with service (1 service in the cluster): %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of network Iperf3 UDP with service (1 service in the cluster): " + output + "\n" + stars + "\n")
-
-		fileoutput.WriteString(time.Now().String())
-
-		output = netperf.TCPservice(clientset,  true, false, fileoutput, 1)
-		fmt.Printf("\n%s\navg speed of network Netperf TCP with service (1 service in the cluster): %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of network Netperf TCP with service (1 service in the cluster):: " + output + "\n" + stars + "\n")
-
-		fmt.Println(time.Now())
-
-		fileoutput.WriteString(time.Now().String())
-		output = iperf.TCPservice(clientset,  true, true, fileoutput, 10)
-		fmt.Printf("\n%s\navg speed of network Iperf3 TCP with service (10 multiple services in the cluster): %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of network Iperf3 TCP with service (multiple services in the cluster): " + output + "\n" + stars + "\n")
-
-		output = iperf.UDPservice(clientset,  true, true, fileoutput, 10)
-		fmt.Printf("\n%s\navg speed of network Iperf3 UDP with service (10 multiple services in the cluster): %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of network Iperf3 UDP with service (multiple services in the cluster): " + output + "\n" + stars + "\n")
-
-		fileoutput.WriteString(time.Now().String())
-
-		output = netperf.TCPservice(clientset,  true, true, fileoutput, 10)
-		fmt.Printf("\n%s\navg speed of network Netperf TCP with service (10 multiple services in the cluster): %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of network Netperf TCP with service (multiple services in the cluster): " + output + "\n" + stars + "\n")
-
-		output = iperf.TCPservice(clientset,  true, true, fileoutput, 10000)
-		fmt.Printf("\n%s\navg speed of network Iperf3 TCP with service (10000 services in the cluster): %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of network Iperf3 TCP with service (multiple services in the cluster): " + output + "\n" + stars + "\n")
-
-		output = iperf.UDPservice(clientset,  true, true, fileoutput, 10000)
-		fmt.Printf("\n%s\navg speed of network Iperf3 UDP with service (10000 multiple services in the cluster): %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of network Iperf3 UDP with service (multiple services in the cluster): " + output + "\n" + stars + "\n")
-
-		fileoutput.WriteString(time.Now().String())
-
-		output = netperf.TCPservice(clientset,  true, true, fileoutput, 10000)
-		fmt.Printf("\n%s\navg speed of network Netperf TCP with service (10000 multiple services in the cluster): %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of network Netperf TCP with service (multiple services in the cluster): " + output + "\n" + stars + "\n")
-
-		fmt.Println("-----------------------------------------------------------------")
-		fileoutput.WriteString("-----------------------------------------------------------------")
-		fileoutput.WriteString("-----------------------------------------------------------------")
-		fmt.Println("-----------------------------------------------------------------")
-
-		fileoutput.WriteString(time.Now().String())
-
-		fmt.Printf("\n\n")
-		fmt.Println("POD TO POD SAME NODE:")
-		fileoutput.WriteString("\nPOD TO POD SAME NODE:\n")
-		output = iperf.IperfTCPPodtoPod(clientset, false, fileoutput, false, 0)
-		fmt.Printf("\n%s\navg speed of the network Iperf3 TCP (same node): %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of the network Iperf3 TCP (same node): " + output + "\n" + stars + "\n")
-
-		output = iperf.IperfUDPPodtoPod(clientset, false, fileoutput, false, 0)
-		fmt.Printf("\n%s\navg speed of the network Iperf3 UDP (same node): %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of the network Iperf3 UDP (same node): " + output + "\n" + stars + "\n")
-
-		fileoutput.WriteString(time.Now().String())
-
-		output = netperf.NetperfTCPPodtoPod(clientset, false, fileoutput, false, 0)
-		fmt.Printf("\n%s\navg speed of the network Netperf TCP (same node): %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of the network Netperf TCP (same node): " + output + "\n" + stars + "\n")
-
-		output = netperf.NetperfUDPPodtoPod(clientset, false, fileoutput, false, 0)
-		fmt.Printf("\n%s\navg speed of the network Netperf UDP (same node): %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of the network Netperf UDP (same node): " + output + "\n" + stars + "\n")
-		fmt.Println(time.Now())
-
-		fileoutput.WriteString(time.Now().String())
-
-		output = iperf.TCPservice(clientset, false, false, fileoutput, 1)
-		fmt.Printf("\n%s\navg speed of network Iperf3 TCP with service(same node) (1 service in the cluster): %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of network Iperf3 TCP with service (1 service in the cluster): " + output + "\n" + stars + "\n")
-
-		output = iperf.UDPservice(clientset, false, false, fileoutput, 1)
-		fmt.Printf("\n%s\navg speed of network Iperf3 UDP with service(same node) (1 service in the cluster): %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of network Iperf3 UDP with service (1 service in the cluster): " + output + "\n" + stars + "\n")
-
-		fileoutput.WriteString(time.Now().String())
-
-		output = netperf.TCPservice(clientset, false, false, fileoutput, 1)
-		fmt.Printf("\n%s\navg speed of network Netperf TCP with service(same node) (1 service in the cluster): %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of network Netperf TCP with service(same node) (1 service in the cluster): " + output + "\n" + stars + "\n")
-
-		fmt.Println(time.Now())
-		fileoutput.WriteString(time.Now().String())
-
-		output = iperf.TCPservice(clientset, false, true, fileoutput, 10)
-		fmt.Printf("\n%s\navg speed of network Iperf3 TCP with service(same node) (10 multiple services in the cluster): %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of network Iperf3 TCP with service (same node) (multiple services in the cluster): " + output + "\n" + stars + "\n")
-
-		output = iperf.UDPservice(clientset, false, true, fileoutput, 10)
-		fmt.Printf("\n%s\navg speed of network Iperf3 UDP with service(same node) (10 multiple services in the cluster): %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of network Iperf3 UDP with service (same node) (multiple services in the cluster): " + output + "\n" + stars + "\n")
-
-		fileoutput.WriteString(time.Now().String())
-
-		output = netperf.TCPservice(clientset, false, true, fileoutput, 10)
-		fmt.Printf("\n%s\navg speed of network Netperf TCP with service(same node) (10 multiple services in the cluster): %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of network Netperf TCP with service(same node) (multiple services in the cluster): " + output + "\n" + stars + "\n")
-
-		output = iperf.TCPservice(clientset, false, true, fileoutput, 10000)
-		fmt.Printf("\n%s\navg speed of network Iperf3 TCP with service(same node) (10000 services in the cluster): %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of network Iperf3 TCP with service (1 service in the cluster): " + output + "\n" + stars + "\n")
-
-		output = iperf.UDPservice(clientset, false, true, fileoutput, 10000)
-		fmt.Printf("\n%s\navg speed of network Iperf3 UDP with service(same node) (10000 services in the cluster): %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of network Iperf3 UDP with service (1 service in the cluster): " + output + "\n" + stars + "\n")
-
-		fileoutput.WriteString(time.Now().String())
-
-		output = netperf.TCPservice(clientset, false, true, fileoutput, 10000)
-		fmt.Printf("\n%s\navg speed of network Netperf TCP with service(same node) (10000 services in the cluster): %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of network Netperf TCP with service(same node) (1 service in the cluster): " + output + "\n" + stars + "\n")
-
-		fileoutput.WriteString(time.Now().String())
-
-		fmt.Println(time.Now())
-
-		fileoutput.WriteString("-----------------------------------------------------------------")
-		fileoutput.WriteString("-----------------------------------------------------------------")
-		fmt.Println("-----------------------------------------------------------------")
-		fmt.Println("-----------------------------------------------------------------")
-
-		fmt.Printf("\n\n")
-		fmt.Println("HairpinBack:")
-		fileoutput.WriteString("\nHairpin back:\n")
-
-		output = netperf.TCPHairpinservice(clientset, false, fileoutput, 1)
-		fmt.Printf("\n%s\navg speed of network Netperf TCP Hairpinback with service (1 service in the cluster): %s\n%s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of network Netperf TCP Hairpinback with service (1 service in the cluster): " + output + "\n" + stars + "\n")
-		fileoutput.WriteString(time.Now().String())
-
-		// Parte aggiuntiva di curl
-	*/
-	output := "ciao"
-	for i := 0; i < 4; i++ {
-		for j := 3; j < 4; j++ {
-			output = curl.SpeedMovingFileandLatency(clientset, netPolRep[i], true, fileoutput, netPolServices[j])
-			fmt.Printf("\n%s\n Network speed and latency with a growing number of services and endpoints: %s\n%s\n", stars, output, stars)
-			fileoutput.WriteString("\n" + stars + "\n" + "Network speed and latency with a growing number of services " + strconv.Itoa(netPolServices[j]) + " and endpoints " + strconv.Itoa(netPolRep[i]) + " : " + output + "\n" + stars + "\n")
-		}
-	}
-
-	// parte aggiuntiva su test con molti pods nel cluster
-
-	multiple := true
-	numServ := 10000
-	for i := 0; i < 1; i++ {
-		output = iperf.TCPservice(clientset, true, multiple, fileoutput, numServ)
-		fmt.Printf("\n%s\navg speed of network Iperf3 TCP with service (%d service in the cluster): %s\n %s\n", stars, numServ, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of network Iperf3 TCP with service (" + strconv.Itoa(numServ) + " service in the cluster): " + output + "\n" + stars + "\n")
-		output = iperf.TCPservice(clientset, false, multiple, fileoutput, numServ)
-		fmt.Printf("\n%s\navg speed of network Iperf3 TCP with service(same node) (%d service in the cluster): %s\n %s\n", stars, numServ, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of network Iperf3 TCP with service (" + strconv.Itoa(numServ) + " service in the cluster): " + output + "\n" + stars + "\n")
-
-		output = iperf.UDPservice(clientset, true, multiple, fileoutput, numServ)
-		fmt.Printf("\n%s\navg speed of network Iperf3 UDP with service(%d service in the cluster): %s\n %s\n", stars, numServ, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of network Iperf3 UDP with service (" + strconv.Itoa(numServ) + " service in the cluster): " + output + "\n" + stars + "\n")
-
-		fileoutput.WriteString(time.Now().String())
-
-		output = netperf.TCPservice(clientset, true, multiple, fileoutput, numServ)
-		fmt.Printf("\n%s\navg speed of network Netperf TCP with service(%d service in the cluster): %s\n %s\n", stars, numServ, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of network Netperf TCP with service (" + strconv.Itoa(numServ) + " service in the cluster): " + output + "\n" + stars + "\n")
-
-	}
-
-	//parte con netpol installate nel cluster
-	numberNet := 10000
-	fmt.Println("Network Policies Part")
-	for i := 0; i < 1; i++ {
-
-		output = iperf.IperfTCPPodtoPod(clientset, true, fileoutput, true, numberNet)
-		fmt.Printf("\n%s\navg speed of the network Iperf3 TCP: %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of the network Iperf3 TCP: " + output + "\n" + stars + "\n")
-
-		output = iperf.IperfTCPPodtoPod(clientset, false, fileoutput, true, numberNet)
-		fmt.Printf("\n%s\navg speed of the network Iperf3 TCP: %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of the network Iperf3 TCP: " + output + "\n" + stars + "\n")
-
-		output = iperf.IperfUDPPodtoPod(clientset, true, fileoutput, true, numberNet)
-		fmt.Printf("\n%s\navg speed of the network Iperf3 UDP: %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of the network Iperf3 UDP: " + output + "\n" + stars + "\n")
-
-		output = iperf.IperfUDPPodtoPod(clientset, false, fileoutput, true, numberNet)
-		fmt.Printf("\n%s\navg speed of the network Iperf3 UDP: %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of the network Iperf3 UDP: " + output + "\n" + stars + "\n")
-
-		output = netperf.NetperfTCPPodtoPod(clientset, true, fileoutput, true, numberNet)
-		fmt.Printf("\n%s\navg speed of the network Netperf TCP: %s\n %s\n", stars, output, stars)
-		fileoutput.WriteString("\n" + stars + "\n" + "avg speed of the network Netperf TCP: " + output + "\n" + stars + "\n")
-
-		fileoutput.WriteString(time.Now().String())
-
-	}
+	//// Parte aggiuntiva di curl
+	//netPolRep := [4]int{10, 20, 50, 100}
+	//netPolServices := [4]int{1, 100, 1000, 10000}
+	//for i := 0; i < 4; i++ {
+	//	for j := 3; j < 4; j++ {
+	//		output := curl.SpeedMovingFileandLatency(clientset, netPolRep[i], true, fileoutput, netPolServices[j])
+	//		s := fmt.Sprintf(
+	//			"\n%s\nNetwork speed and latency with a growing number of services %d and endpoints %d : %s\n%s\n",
+	//			stars, netPolServices[j], netPolRep[i], output, stars,
+	//		)
+	//		fmt.Print(s)
+	//		fileoutput.WriteString(s)
+	//	}
+	//}
 
 	fmt.Println(time.Now())
-	err = fileoutput.Close()
-	if err != nil {
-		fmt.Println(err)
-		return
+	if err := fileoutput.Close(); err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(1)
 	}
 
-	nodes, errNodes = clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
-	count = 1
-	for i := 0; i < len(nodes.Items); i++ {
-		if _, master := nodes.Items[i].Labels["node-role.kubernetes.io/master"]; !master {
-			if _, nodeLab := nodes.Items[i].Labels["node-role.kubernetes.io/master"]; !nodeLab {
-				nodes.Items[i].SetLabels(labels[count-1])
-				delete(nodes.Items[i].Labels, "type")
-			}
-			_, errLabel = clientset.CoreV1().Nodes().Update(context.TODO(), &nodes.Items[i], metav1.UpdateOptions{})
-			if errLabel != nil {
-				fmt.Println(errLabel)
-				return
-			}
-			count++
-		}
-
-		if count == 3 {
-			break
-		}
+	if err := removeTypeLabel(clientset); err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(1)
 	}
 }
 
