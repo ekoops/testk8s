@@ -9,8 +9,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"os"
 	"path/filepath"
+	"testk8s/curl"
 	"testk8s/iperf"
-	"testk8s/netperf"
 	"time"
 )
 
@@ -57,26 +57,26 @@ func testPodToPod(cset *kubernetes.Clientset, diffNodes bool, f *os.File) {
 	printNow(f)
 
 	output := iperf.IperfTCPPodtoPod(cset, diffNodes, f, false, 0)
-	s := fmt.Sprintf("\n%s\navg speed of the network Iperf3 TCP (diff. nodes: %T): %s\n %s\n", stars, diffNodes, output, stars)
+	s := fmt.Sprintf("\n%s\navg speed of the network Iperf3 TCP (diff. nodes: %t): %s\n %s\n", stars, diffNodes, output, stars)
 	fmt.Print(s)
 	f.WriteString(s)
 
 	output = iperf.IperfUDPPodtoPod(cset, diffNodes, f, false, 0)
-	s = fmt.Sprintf("\n%s\navg speed of the network Iperf3 UDP (diff. nodes: %T): %s\n %s\n", stars, diffNodes, output, stars)
+	s = fmt.Sprintf("\n%s\navg speed of the network Iperf3 UDP (diff. nodes: %t): %s\n %s\n", stars, diffNodes, output, stars)
 	fmt.Print(s)
 	f.WriteString(s)
 
 	f.WriteString(time.Now().String())
 
-	output = netperf.NetperfTCPPodtoPod(cset, diffNodes, f, false, 0)
-	s = fmt.Sprintf("\n%s\navg speed of the network Netperf TCP (diff. nodes: %T): %s\n %s\n", stars, diffNodes, output, stars)
-	fmt.Print(s)
-	f.WriteString(s)
-
-	output = netperf.NetperfUDPPodtoPod(cset, diffNodes, f, false, 0)
-	s = fmt.Sprintf("\n%s\navg speed of the network Netperf UDP (diff. nodes: %T): %s\n %s\n", stars, diffNodes, output, stars)
-	fmt.Print(s)
-	f.WriteString(s)
+	//output = netperf.NetperfTCPPodtoPod(cset, diffNodes, f, false, 0)
+	//s = fmt.Sprintf("\n%s\navg speed of the network Netperf TCP (diff. nodes: %t): %s\n %s\n", stars, diffNodes, output, stars)
+	//fmt.Print(s)
+	//f.WriteString(s)
+	//
+	//output = netperf.NetperfUDPPodtoPod(cset, diffNodes, f, false, 0)
+	//s = fmt.Sprintf("\n%s\navg speed of the network Netperf UDP (diff. nodes: %t): %s\n %s\n", stars, diffNodes, output, stars)
+	//fmt.Print(s)
+	//f.WriteString(s)
 
 	printNow(f)
 }
@@ -86,7 +86,7 @@ func testPodToSvc(cset *kubernetes.Clientset, diffNodes bool, multiple bool, svc
 
 	output := iperf.TCPservice(cset, diffNodes, multiple, f, svcNum)
 	s := fmt.Sprintf(
-		"\n%s\navg speed of network Iperf3 TCP with service (diff. nodes: %T; services in cluster: %d): %s\n %s\n",
+		"\n%s\navg speed of network Iperf3 TCP with service (diff. nodes: %t; services in cluster: %d): %s\n %s\n",
 		stars, diffNodes, svcNum, output, stars,
 	)
 	fmt.Print(s)
@@ -94,7 +94,7 @@ func testPodToSvc(cset *kubernetes.Clientset, diffNodes bool, multiple bool, svc
 
 	output = iperf.UDPservice(cset, diffNodes, multiple, f, svcNum)
 	s = fmt.Sprintf(
-		"\n%s\navg speed of network Iperf3 UDP with service (diff. nodes: %T; services in cluster: %d): %s\n %s\n",
+		"\n%s\navg speed of network Iperf3 UDP with service (diff. nodes: %t; services in cluster: %d): %s\n %s\n",
 		stars, diffNodes, svcNum, output, stars,
 	)
 	fmt.Print(s)
@@ -102,13 +102,13 @@ func testPodToSvc(cset *kubernetes.Clientset, diffNodes bool, multiple bool, svc
 
 	f.WriteString(time.Now().String())
 
-	output = netperf.TCPservice(cset, diffNodes, multiple, f, svcNum)
-	s = fmt.Sprintf(
-		"\n%s\navg speed of network Netperf TCP with service (diff. nodes: %T; services in cluster: %d): %s\n %s\n",
-		stars, diffNodes, svcNum, output, stars,
-	)
-	fmt.Print(s)
-	f.WriteString(s)
+	//output = netperf.TCPservice(cset, diffNodes, multiple, f, svcNum)
+	//s = fmt.Sprintf(
+	//	"\n%s\navg speed of network Netperf TCP with service (diff. nodes: %t; services in cluster: %d): %s\n %s\n",
+	//	stars, diffNodes, svcNum, output, stars,
+	//)
+	//fmt.Print(s)
+	//f.WriteString(s)
 
 	printNow(f)
 }
@@ -149,20 +149,20 @@ func main() {
 
 	testPodToSvc(clientset, false, true, 10, fileoutput)
 
-	//// Parte aggiuntiva di curl
-	//netPolRep := [4]int{10, 20, 50, 100}
-	//netPolServices := [4]int{1, 100, 1000, 10000}
-	//for i := 0; i < 4; i++ {
-	//	for j := 3; j < 4; j++ {
-	//		output := curl.SpeedMovingFileandLatency(clientset, netPolRep[i], true, fileoutput, netPolServices[j])
-	//		s := fmt.Sprintf(
-	//			"\n%s\nNetwork speed and latency with a growing number of services %d and endpoints %d : %s\n%s\n",
-	//			stars, netPolServices[j], netPolRep[i], output, stars,
-	//		)
-	//		fmt.Print(s)
-	//		fileoutput.WriteString(s)
-	//	}
-	//}
+	// Parte aggiuntiva di curl
+	netPolRep := [4]int{10, 20, 50, 100}
+	netPolServices := [4]int{1, 100, 1000, 10000}
+	for i := 0; i < 4; i++ {
+		for j := 3; j < 4; j++ {
+			output := curl.SpeedMovingFileandLatency(clientset, netPolRep[i], true, fileoutput, netPolServices[j])
+			s := fmt.Sprintf(
+				"\n%s\nNetwork speed and latency with a growing number of services %d and endpoints %d : %s\n%s\n",
+				stars, netPolServices[j], netPolRep[i], output, stars,
+			)
+			fmt.Print(s)
+			fileoutput.WriteString(s)
+		}
+	}
 
 	fmt.Println(time.Now())
 	if err := fileoutput.Close(); err != nil {
